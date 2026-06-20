@@ -48,7 +48,7 @@ export default function App() {
       <Card title="Routing">
         <View style={styles.switchRow}>
           <Text style={styles.label}>Treat prompt as sensitive</Text>
-          <Switch value={sensitive} onValueChange={setSensitive} />
+          <Switch testID="switch-sensitive" value={sensitive} onValueChange={setSensitive} />
         </View>
         <Text style={styles.label}>Fallback policy</Text>
         <Row>
@@ -57,6 +57,7 @@ export default function App() {
             return (
               <Pressable
                 key={option}
+                testID={`chip-${option}`}
                 onPress={() => setFallback(option)}
                 style={[styles.chip, selected ? styles.chipSelected : null]}
               >

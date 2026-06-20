@@ -1,0 +1,39 @@
+appId: com.stewmore.expoai.streamingchat
+name: streaming-chat / Stream via mock cloud (cloud-mock)
+tags:
+  - cloud-mock
+# PRECONDITIONS: `npm run server` running; device has no on-device model.
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "title-streaming-chat"
+- tapOn:
+    id: "button-stream"
+# The transient "streaming…" badge (id badge-streaming) is racy: at ~15ms/token
+# the stream can finish before a screenshot poll catches it. Do NOT assert it.
+# Wait instead for the terminal state: the Output card + final provider badges,
+# which only render once chunk.type === "done" sets the result.
+- extendedWaitUntil:
+    visible:
+      id: "card-output"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "badge-cloud"
+    timeout: 30000
+- assertVisible:
+    id: "badge-third-party-cloud"
+# Streaming has finished: the button is "Stream" again, not "Stop". Assert this
+# BEFORE scrolling to the reply, which would push the button off the top.
+- assertVisible:
+    id: "button-stream"
+# Streamed text accumulates to the mock reply, which renders below the fold, so
+# scroll it into view. Pattern wrapped in .* because this Maestro/iOS build
+# matches text (accessibilityText) as a FULL-string regex, not a substring.
+- scrollUntilVisible:
+    element:
+      text: ".*mock response from the Expo AI Runtime reference server.*"
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 30

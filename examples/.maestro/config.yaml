@@ -1,0 +1,30 @@
+# Maestro workspace config for the Expo AI Runtime example apps.
+#
+# Each flow file declares its own `appId` (one app per example) and its own
+# `tags`. Because the four apps have DIFFERENT appIds, running this whole
+# directory at once only works if all four dev builds are installed on the
+# booted device. Normally you run ONE app's folder at a time:
+#
+#   maestro test examples/.maestro/basic-generate
+#
+# Tags:
+#   offline     - no server, no network. Deterministic on any sim/emulator.
+#   cloud-mock  - generation is routed to the bundled mock reference server.
+#                 Preconditions: `npm run server` is running, AND the device
+#                 has no on-device model (so generation falls back to cloud).
+
+# Recurse into the per-app subfolders (depth 1). This intentionally does NOT
+# match config.yaml (depth 0) or README.md.
+flows:
+  - "*/*.yaml"
+
+testOutputDir: maestro_output
+
+executionOrder:
+  continueOnFailure: true
+
+platform:
+  ios:
+    disableAnimations: true
+  android:
+    disableAnimations: true

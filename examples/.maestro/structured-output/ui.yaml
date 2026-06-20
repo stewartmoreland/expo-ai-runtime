@@ -1,0 +1,23 @@
+appId: com.stewmore.expoai.structuredoutput
+name: structured-output / UI (offline)
+tags:
+  - offline
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "title-structured-output"
+- assertVisible:
+    id: "card-schema"
+# The pretty-printed schema JSON contains the key "projectName". Wrapped in .*
+# because this Maestro/iOS build matches text (accessibilityText) as a
+# FULL-string regex, so a bare substring of the JSON blob never matches.
+- assertVisible: ".*projectName.*"
+- assertVisible:
+    id: "card-source-text"
+- tapOn:
+    id: "prompt-input"
+- inputText: "Project Atlas, Q4, $250k."
+- hideKeyboard
+- assertVisible:
+    id: "button-extract-object"

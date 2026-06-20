@@ -1,0 +1,37 @@
+appId: com.stewmore.expoai.basicgenerate
+name: basic-generate / Generate via mock cloud (cloud-mock)
+tags:
+  - cloud-mock
+# PRECONDITIONS: `npm run server` running; device has no on-device model
+# (so generation falls back to the mock cloud).
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "title-basic-generate"
+- tapOn:
+    id: "button-generate"
+# Generation latency: wait up to 30s for the Result card rather than relying on
+# the default ~7s assertVisible retry.
+- extendedWaitUntil:
+    visible:
+      id: "card-result"
+    timeout: 30000
+# Cloud success => provider badge "cloud" + privacy "third-party-cloud".
+- assertVisible:
+    id: "badge-cloud"
+- assertVisible:
+    id: "badge-third-party-cloud"
+# The reply renders at the bottom of the Result card, below the fold in the
+# screen's ScrollView, so scroll it into view. The pattern is wrapped in .* —
+# this Maestro/iOS build matches text against accessibilityText as a FULL-string
+# regex, so a bare substring of the long reply paragraph never matches.
+# visibilityPercentage is lowered because the paragraph's last line clips behind
+# the RN dev-warning toast and so never reaches 100% visible; the target text is
+# in the first line. scrollUntilVisible also asserts visibility once found.
+- scrollUntilVisible:
+    element:
+      text: ".*mock response from the Expo AI Runtime reference server.*"
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 30

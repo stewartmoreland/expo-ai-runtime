@@ -1,0 +1,38 @@
+appId: com.stewmore.expoai.cloudfallback
+name: cloud-fallback / Sensitive + fallback=cloud routes to mock cloud (cloud-mock)
+tags:
+  - cloud-mock
+# PRECONDITIONS: `npm run server` running; device has no on-device model.
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "title-cloud-fallback"
+- assertVisible:
+    id: "switch-sensitive"
+    checked: true
+# Explicitly opt in to cloud for a sensitive prompt.
+- tapOn:
+    id: "chip-cloud"
+- tapOn:
+    id: "button-generate"
+- extendedWaitUntil:
+    visible:
+      id: "card-result"
+    timeout: 30000
+- assertVisible:
+    id: "badge-cloud"
+- assertVisible:
+    id: "badge-third-party-cloud"
+# usedFallback badge (label "used fallback" -> id badge-used-fallback).
+- assertVisible:
+    id: "badge-used-fallback"
+# The reply renders below the fold; scroll it into view. Pattern wrapped in .*
+# because this Maestro/iOS build matches text (accessibilityText) as a
+# FULL-string regex, not a substring.
+- scrollUntilVisible:
+    element:
+      text: ".*mock response from the Expo AI Runtime reference server.*"
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 30

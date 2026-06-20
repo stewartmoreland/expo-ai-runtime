@@ -13,11 +13,25 @@ import {
 
 import { theme, toneColor, type BadgeTone } from "./theme";
 
+/**
+ * Derive a stable, selector-safe testID fragment from human text so Maestro
+ * flows can target elements by `id` instead of brittle/locale-bound copy.
+ * "On-device" -> "on-device", "Re-check" -> "re-check", "streaming…" -> "streaming".
+ */
+export function slug(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function Screen({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} testID={`screen-${slug(title)}`}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title} testID={`title-${slug(title)}`}>
+          {title}
+        </Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         {children}
       </ScrollView>
@@ -27,7 +41,7 @@ export function Screen({ title, subtitle, children }: { title: string; subtitle?
 
 export function Card({ title, children }: { title?: string; children: ReactNode }) {
   return (
-    <View style={styles.card}>
+    <View style={styles.card} testID={title ? `card-${slug(title)}` : undefined}>
       {title ? <Text style={styles.cardTitle}>{title}</Text> : null}
       {children}
     </View>
@@ -37,7 +51,7 @@ export function Card({ title, children }: { title?: string; children: ReactNode 
 export function Badge({ label, tone = "neutral" }: { label: string; tone?: BadgeTone }) {
   const color = toneColor[tone];
   return (
-    <View style={[styles.badge, { borderColor: color }]}>
+    <View style={[styles.badge, { borderColor: color }]} testID={`badge-${slug(label)}`}>
       <View style={[styles.dot, { backgroundColor: color }]} />
       <Text style={[styles.badgeText, { color }]}>{label}</Text>
     </View>
@@ -50,9 +64,11 @@ export function Row({ children }: { children: ReactNode }) {
 
 export function KeyValue({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.kv}>
+    <View style={styles.kv} testID={`kv-row-${slug(label)}`}>
       <Text style={styles.kvLabel}>{label}</Text>
-      <Text style={styles.kvValue}>{value}</Text>
+      <Text style={styles.kvValue} testID={`kv-${slug(label)}`}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -62,9 +78,11 @@ export function PromptInput(props: {
   onChangeText: (text: string) => void;
   placeholder?: string;
   multiline?: boolean;
+  testID?: string;
 }) {
   return (
     <TextInput
+      testID={props.testID ?? "prompt-input"}
       style={[styles.input, props.multiline ? styles.inputMultiline : null]}
       value={props.value}
       onChangeText={props.onChangeText}
@@ -89,6 +107,8 @@ export function PrimaryButton({
   const isDisabled = disabled || loading;
   return (
     <Pressable
+      testID={`button-${slug(title)}`}
+      accessibilityRole="button"
       style={[styles.button, isDisabled ? styles.buttonDisabled : null]}
       onPress={onPress}
       disabled={isDisabled}
