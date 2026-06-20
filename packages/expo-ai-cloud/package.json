@@ -17,9 +17,18 @@
       "default": "./build/index.js"
     }
   },
-  "files": ["build", "src"],
+  "files": [
+    "build",
+    "src"
+  ],
   "sideEffects": false,
-  "keywords": ["expo", "react-native", "ai", "cloud", "fallback"],
+  "keywords": [
+    "expo",
+    "react-native",
+    "ai",
+    "cloud",
+    "fallback"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepack": "npm run build",
@@ -31,7 +40,7 @@
     "@stewmore/expo-ai-core": "^0.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.6.3",
-    "vitest": "^2.1.8"
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.9"
   }
 }

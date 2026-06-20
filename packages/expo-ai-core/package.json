@@ -26,7 +26,14 @@
     "src"
   ],
   "sideEffects": false,
-  "keywords": ["expo", "react-native", "ai", "on-device", "foundation-models", "gemini-nano"],
+  "keywords": [
+    "expo",
+    "react-native",
+    "ai",
+    "on-device",
+    "foundation-models",
+    "gemini-nano"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepack": "npm run build",
@@ -36,7 +43,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "typescript": "^5.6.3",
-    "vitest": "^2.1.8"
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.9"
   }
 }
