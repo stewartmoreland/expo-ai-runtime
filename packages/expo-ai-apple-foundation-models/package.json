@@ -28,7 +28,7 @@
   "keywords": ["expo", "react-native", "ai", "apple", "foundation-models", "on-device"],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "prepare": "npm run build",
+    "prepack": "npm run build",
     "clean": "rm -rf build",
     "typecheck": "tsc --noEmit -p tsconfig.build.json"
   },

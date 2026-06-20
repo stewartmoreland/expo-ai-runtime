@@ -27,8 +27,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm run build # build first so cross-package type declarations exist for typecheck
       - run: npm run typecheck
-      - run: npm run build
       - run: npm test
 
   release:
@@ -60,20 +60,19 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Decide whether a release is needed
         id: decide
-        # release-it --release-version reports the version the conventional commits
-        # would produce. If it matches what's already on npm, there are no new
-        # releasable commits (or this push is docs/chore/ci only) — skip publish so
-        # the run stays green instead of colliding on an already-published version.
+        # Release only when there are user-facing changes (feat/fix/perf or a
+        # breaking change) since the last v* tag. chore/ci/docs/build/style/test/
+        # refactor commits don't cut a new npm version. release-it computes the
+        # actual bump (fix->patch, feat->minor, !/BREAKING->major) when it runs.
         run: |
-          NEXT=$(npx release-it --release-version --ci 2>/dev/null || true)
-          PUBLISHED=$(npm view @stewmore/expo-ai-core version 2>/dev/null || echo "none")
-          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
-          if [ -z "$NEXT" ] || [ "$NEXT" = "$PUBLISHED" ]; then
-            echo "release=false" >> "$GITHUB_OUTPUT"
-            echo "No new version to release (next='$NEXT', published='$PUBLISHED'). Skipping publish."
-          else
+          LAST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then RANGE="${LAST_TAG}..HEAD"; else RANGE="HEAD"; fi
+          if git log "$RANGE" --format='%s%n%b' | grep -qiE '^(feat|fix|perf)(\(.+\))?!?:|^[a-z]+(\(.+\))?!:|BREAKING[ -]CHANGE'; then
             echo "release=true" >> "$GITHUB_OUTPUT"
-            echo "Releasing $PUBLISHED -> $NEXT"
+            echo "Releasable commits since ${LAST_TAG:-<root>} — releasing."
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "No feat/fix/perf/breaking commits since ${LAST_TAG:-<root>} — skipping publish."
           fi
       - name: release-it (bump, changelog, tag, GitHub release, publish all @stewmore/* packages)
         if: steps.decide.outputs.release == 'true'
