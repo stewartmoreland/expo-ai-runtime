@@ -1,0 +1,39 @@
+{
+  "name": "@stewmore/expo-ai-core",
+  "version": "0.1.0",
+  "description": "Mobile-native AI runtime core: unified ExpoAI API, provider router, capability detection, sessions, structured output, privacy metadata, and normalized errors.",
+  "license": "MIT",
+  "author": "Stewart Moreland <stewart.moreland@gmail.com>",
+  "type": "module",
+  "main": "./build/index.js",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    },
+    "./testing": {
+      "types": "./build/testing.d.ts",
+      "default": "./build/testing.js"
+    }
+  },
+  "files": [
+    "build",
+    "src"
+  ],
+  "sideEffects": false,
+  "keywords": ["expo", "react-native", "ai", "on-device", "foundation-models", "gemini-nano"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "clean": "rm -rf build",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

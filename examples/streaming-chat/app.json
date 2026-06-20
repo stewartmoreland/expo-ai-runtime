@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Streaming Chat",
+    "slug": "expo-ai-streaming-chat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.stewmore.expoai.streamingchat"
+    },
+    "android": {
+      "package": "com.stewmore.expoai.streamingchat"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": { "deploymentTarget": "15.1" },
+          "android": { "minSdkVersion": 26 }
+        }
+      ]
+    ]
+  }
+}

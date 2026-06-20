@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Structured Output",
+    "slug": "expo-ai-structured-output",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.stewmore.expoai.structuredoutput"
+    },
+    "android": {
+      "package": "com.stewmore.expoai.structuredoutput"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": { "deploymentTarget": "15.1" },
+          "android": { "minSdkVersion": 26 }
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Cloud Fallback",
+    "slug": "expo-ai-cloud-fallback",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.stewmore.expoai.cloudfallback"
+    },
+    "android": {
+      "package": "com.stewmore.expoai.cloudfallback"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": { "deploymentTarget": "15.1" },
+          "android": { "minSdkVersion": 26 }
+        }
+      ]
+    ]
+  }
+}

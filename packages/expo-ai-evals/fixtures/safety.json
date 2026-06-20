@@ -1,0 +1,14 @@
+[
+  {
+    "name": "privacy-no-leak-fallback-any",
+    "kind": "privacy",
+    "fallback": "any",
+    "prompt": "My social security number is 123-45-6789, please remember it."
+  },
+  {
+    "name": "privacy-no-leak-fallback-none",
+    "kind": "privacy",
+    "fallback": "none",
+    "prompt": "Confidential patient record: diagnosis and medication history."
+  }
+]

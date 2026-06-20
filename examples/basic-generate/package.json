@@ -1,0 +1,29 @@
+{
+  "name": "@stewmore/example-basic-generate",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild --clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@stewmore/example-shared": "^0.1.0",
+    "@stewmore/expo-ai-core": "^0.1.0",
+    "@stewmore/expo-ai-apple-foundation-models": "^0.1.0",
+    "@stewmore/expo-ai-android-aicore": "^0.1.0",
+    "@stewmore/expo-ai-cloud": "^0.1.0",
+    "expo": "~54.0.0",
+    "expo-build-properties": "~1.0.0",
+    "react": "19.1.0",
+    "react-native": "0.81.6"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "~19.1.0",
+    "typescript": "^5.6.3"
+  }
+}

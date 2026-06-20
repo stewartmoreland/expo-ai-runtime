@@ -1,0 +1,39 @@
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+group = 'expo.modules.ai.aicore'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(
+  project(":expo-modules-core").projectDir.absolutePath,
+  "ExpoModulesCorePlugin.gradle"
+)
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+
+// Aligns compile/target SDK and Kotlin/JVM versions with the host Expo project.
+useCoreDependencies()
+useExpoPublishing()
+
+android {
+  namespace "expo.modules.ai.aicore"
+  defaultConfig {
+    // ML Kit GenAI / AICore (Gemini Nano) requires API 26+.
+    minSdkVersion 26
+  }
+
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  implementation project(':expo-modules-core')
+
+  // ML Kit GenAI Prompt API (free-form generation via Gemini Nano / AICore).
+  // NOTE: this is a beta artifact; bump the version to the latest released
+  //       com.google.mlkit:genai-prompt when building.
+  implementation "com.google.mlkit:genai-prompt:1.0.0-beta1"
+
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
+}

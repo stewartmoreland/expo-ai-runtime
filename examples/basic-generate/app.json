@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Basic Generate",
+    "slug": "expo-ai-basic-generate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.stewmore.expoai.basicgenerate"
+    },
+    "android": {
+      "package": "com.stewmore.expoai.basicgenerate"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": { "deploymentTarget": "15.1" },
+          "android": { "minSdkVersion": 26 }
+        }
+      ]
+    ]
+  }
+}

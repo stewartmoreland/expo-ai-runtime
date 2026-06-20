@@ -1,0 +1,16 @@
+[
+  {
+    "name": "extract-person",
+    "kind": "object",
+    "prompt": "Extract the person from: Ada Lovelace, age 36, interests math and computing.",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "age": { "type": "integer", "minimum": 0 },
+        "interests": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["name", "age"]
+    }
+  }
+]

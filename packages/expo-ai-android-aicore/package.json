@@ -1,0 +1,42 @@
+{
+  "name": "@stewmore/expo-ai-android-aicore",
+  "version": "0.1.0",
+  "description": "Android Gemini Nano via ML Kit GenAI / AICore (on-device) provider for the Expo AI Runtime.",
+  "license": "MIT",
+  "author": "Stewart Moreland <stewart.moreland@gmail.com>",
+  "type": "module",
+  "main": "./build/index.js",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    }
+  },
+  "files": [
+    "build",
+    "src",
+    "android",
+    "expo-module.config.json"
+  ],
+  "sideEffects": ["./build/index.js", "./src/index.ts"],
+  "keywords": ["expo", "react-native", "ai", "android", "gemini-nano", "ml-kit", "aicore", "on-device"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "clean": "rm -rf build",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@stewmore/expo-ai-core": "^0.1.0"
+  },
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
