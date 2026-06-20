@@ -159,3 +159,71 @@ code {
   border: 1px solid var(--eai-border);
   background: var(--eai-card);
 }
+
+/* --- Mermaid diagrams ---------------------------------------------------
+   Diagrams are framed like the example apps' panels: a navy surface inside a
+   hairline border, with a faint accent wash at the top so they read as a
+   first-class artifact rather than an inline image. The themeVariables in
+   docusaurus.config.ts handle the SVG internals; this handles the frame and
+   the one interaction — nodes lift to the accent on hover. */
+.docusaurus-mermaid-container {
+  margin: 1.75rem 0;
+  padding: 1.5rem 1.25rem;
+  background: linear-gradient(
+      180deg,
+      rgba(110, 168, 254, 0.06),
+      rgba(110, 168, 254, 0) 120px
+    ),
+    var(--eai-bg);
+  border: 1px solid var(--eai-border);
+  border-radius: var(--eai-radius);
+  overflow-x: auto;
+}
+
+/* Center the SVG within the frame. */
+.docusaurus-mermaid-container svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Node outlines: hairline border at rest, accent + soft glow on hover.
+   The transition is the only motion — restrained, and it respects the
+   reduced-motion preference below. */
+.docusaurus-mermaid-container .node :is(rect, polygon, circle, path),
+.docusaurus-mermaid-container .node .label-container {
+  transition: stroke 160ms ease, filter 160ms ease;
+}
+.docusaurus-mermaid-container .node:hover :is(rect, polygon, circle) {
+  stroke: var(--eai-accent) !important;
+  filter: drop-shadow(0 0 6px rgba(110, 168, 254, 0.35));
+}
+
+/* Node labels in the body face; keep monospace for code-like tokens. */
+.docusaurus-mermaid-container .nodeLabel,
+.docusaurus-mermaid-container .edgeLabel {
+  font-family: var(--ifm-font-family-base);
+}
+
+/* Edges: thin, calm, with arrowheads tinted to match the line color. */
+.docusaurus-mermaid-container .flowchart-link {
+  stroke-width: 1.5px;
+}
+.docusaurus-mermaid-container .marker {
+  fill: #5a76b8;
+  stroke: #5a76b8;
+}
+
+/* Subgraph clusters: same hairline language as the outer frame. */
+.docusaurus-mermaid-container .cluster rect {
+  rx: 10;
+  ry: 10;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docusaurus-mermaid-container .node :is(rect, polygon, circle, path),
+  .docusaurus-mermaid-container .node .label-container {
+    transition: none;
+  }
+}

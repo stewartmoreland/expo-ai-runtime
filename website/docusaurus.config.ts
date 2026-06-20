@@ -29,10 +29,36 @@ const config: Config = {
   onBrokenLinks: 'throw',
 
   markdown: {
+    mermaid: true,
     hooks: {
       onBrokenMarkdownLinks: 'warn',
     },
   },
+
+  themes: [
+    // Render ```mermaid code blocks as diagrams, themed to the navy identity
+    // below (themeConfig.mermaid).
+    '@docusaurus/theme-mermaid',
+    // Offline, build-time search index — no Algolia/DocSearch server. Serves
+    // the Algolia-style search UI entirely from the static bundle.
+    [
+      require.resolve('@easyops-cn/docusaurus-search-local'),
+      /** @type {import('@easyops-cn/docusaurus-search-local').PluginOptions} */
+      ({
+        hashed: true,
+        indexDocs: true,
+        indexBlog: true,
+        // The "blog" plugin is repurposed as the Changelog (see presets below):
+        // point the indexer at both its source dir and its URL route.
+        blogDir: ['changelog'],
+        blogRouteBasePath: '/changelog',
+        docsRouteBasePath: '/docs',
+        highlightSearchTermsOnTargetPage: true,
+        explicitSearchResultPath: true,
+        searchResultLimits: 8,
+      }),
+    ],
+  ],
 
   i18n: {
     defaultLocale: 'en',
@@ -135,6 +161,59 @@ const config: Config = {
       theme: prismThemes.oceanicNext,
       darkTheme: prismThemes.oceanicNext,
       additionalLanguages: ['swift', 'kotlin', 'bash', 'json'],
+    },
+    // Mermaid diagrams inherit the runtime's dark-navy identity: nodes read as
+    // the app's status cards (--eai-card on --eai-border), edges in a calm
+    // steel-blue derived from the accent. Dark-only, so light === dark.
+    mermaid: {
+      theme: {light: 'base', dark: 'base'},
+      options: {
+        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+        themeVariables: {
+          darkMode: true,
+          background: '#0b1020',
+          fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+          fontSize: '15px',
+
+          // Nodes = status cards.
+          mainBkg: '#151b2e',
+          primaryColor: '#151b2e',
+          primaryTextColor: '#eef2ff',
+          primaryBorderColor: '#26304b',
+          nodeBorder: '#26304b',
+          nodeTextColor: '#eef2ff',
+
+          // Secondary / tertiary fills (subgraph + alt shapes).
+          secondaryColor: '#1d2540',
+          secondaryTextColor: '#eef2ff',
+          secondaryBorderColor: '#26304b',
+          tertiaryColor: '#11182b',
+          tertiaryTextColor: '#9aa6c4',
+          tertiaryBorderColor: '#26304b',
+
+          // Edges: steel-blue from the accent, labels on the page bg.
+          lineColor: '#5a76b8',
+          textColor: '#eef2ff',
+          edgeLabelBackground: '#0b1020',
+
+          // Subgraph clusters.
+          clusterBkg: '#11182b',
+          clusterBorder: '#26304b',
+          titleColor: '#eef2ff',
+
+          // Notes (if used).
+          noteBkgColor: '#1d2540',
+          noteTextColor: '#eef2ff',
+          noteBorderColor: '#26304b',
+        },
+        flowchart: {
+          curve: 'basis',
+          padding: 18,
+          nodeSpacing: 44,
+          rankSpacing: 56,
+          useMaxWidth: true,
+        },
+      },
     },
   } satisfies Preset.ThemeConfig,
 };
