@@ -4,6 +4,9 @@
   "description": "Node-first evaluation harness for the Expo AI Runtime: provider comparison, schema validity, latency, fallback frequency, and privacy boundaries.",
   "license": "MIT",
   "author": "Stewart Moreland <stewart.moreland@gmail.com>",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",

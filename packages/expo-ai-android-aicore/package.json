@@ -4,6 +4,9 @@
   "description": "Android Gemini Nano via ML Kit GenAI / AICore (on-device) provider for the Expo AI Runtime.",
   "license": "MIT",
   "author": "Stewart Moreland <stewart.moreland@gmail.com>",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./build/index.js",
   "module": "./build/index.js",

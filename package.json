@@ -13,10 +13,24 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
     "clean": "npm run clean --workspaces --if-present",
     "eval": "npm run eval --workspace @stewmore/expo-ai-evals",
-    "server": "npm run dev --workspace @stewmore/expo-ai-server"
+    "server": "npm run dev --workspace @stewmore/expo-ai-server",
+    "release": "release-it"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@release-it-plugins/workspaces": "^6.0.0",
+    "@release-it/conventional-changelog": "^11.0.1",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.4",
+    "release-it": "^19.2.4",
+    "typescript-eslint": "^8.61.1"
   },
   "engines": {
     "node": ">=20"

@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch: # manual "Run release" button — covers pushes that don't fire the push trigger
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # push the release commit + tag, create the GitHub release
+  id-token: write # required for npm Trusted Publisher (OIDC) publishing + provenance
+
+jobs:
+  verify:
+    name: Lint, typecheck, build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+
+  release:
+    name: Release & publish to npm
+    needs: verify
+    # On a merge/push to main, or a manual dispatch — never on PRs. The verify gate must pass first.
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the release commit + tag, create the GitHub release
+      id-token: write # mint the OIDC token for npm Trusted Publisher publishing
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main # check out the branch (not a detached SHA) so the release commit can push back
+          fetch-depth: 0 # release-it needs full history + tags to compute the bump
+          fetch-tags: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # >= 22.14.0 required for npm Trusted Publisher OIDC
+          cache: npm
+          registry-url: https://registry.npmjs.org # registry config for the OIDC publish (no token needed)
+      - run: npm install -g npm@latest # npm >= 11.5.1 required for OIDC trusted publishing
+      - run: npm ci
+      - run: npm run build # build/ ships in each package (see "files" in package.json)
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Decide whether a release is needed
+        id: decide
+        # release-it --release-version reports the version the conventional commits
+        # would produce. If it matches what's already on npm, there are no new
+        # releasable commits (or this push is docs/chore/ci only) — skip publish so
+        # the run stays green instead of colliding on an already-published version.
+        run: |
+          NEXT=$(npx release-it --release-version --ci 2>/dev/null || true)
+          PUBLISHED=$(npm view @stewmore/expo-ai-core version 2>/dev/null || echo "none")
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          if [ -z "$NEXT" ] || [ "$NEXT" = "$PUBLISHED" ]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "No new version to release (next='$NEXT', published='$PUBLISHED'). Skipping publish."
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "Releasing $PUBLISHED -> $NEXT"
+          fi
+      - name: release-it (bump, changelog, tag, GitHub release, publish all @stewmore/* packages)
+        if: steps.decide.outputs.release == 'true'
+        run: npx release-it --ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
+      - name: Push release commit to main
+        if: steps.decide.outputs.release == 'true'
+        run: git push origin main --follow-tags
+      - name: Verify release landed on main
+        if: steps.decide.outputs.release == 'true'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          git fetch origin main --tags
+          REMOTE_VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
+          REMOTE_SHA=$(git rev-parse origin/main)
+          TAG_SHA=$(git rev-parse "v${VERSION}^{commit}")
+          if [ "$REMOTE_VERSION" != "$VERSION" ]; then
+            echo "::error::origin/main package.json is $REMOTE_VERSION, expected $VERSION. Release commit may not have been pushed — merge tag v${VERSION} onto main."
+            exit 1
+          fi
+          if [ "$REMOTE_SHA" != "$TAG_SHA" ]; then
+            echo "::error::origin/main ($REMOTE_SHA) is not at tag v${VERSION} ($TAG_SHA). Release commit may not have been pushed — merge tag v${VERSION} onto main."
+            exit 1
+          fi

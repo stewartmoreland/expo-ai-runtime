@@ -82,7 +82,6 @@ function errorPayload(error: unknown): {
 
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: app.fetch, port }, (info) => {
-  // eslint-disable-next-line no-console
   console.log(
     `Expo AI Runtime reference server (${resolveMode()} mode) → http://localhost:${info.port}`,
   );
