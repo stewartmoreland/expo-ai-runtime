@@ -1,0 +1,39 @@
+version: 2
+updates:
+  # npm workspaces — one entry at the root covers every workspace via the root lockfile.
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    # Batch updates so we get a few reviewable PRs instead of one per package.
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      production-dependencies:
+        dependency-type: production
+        update-types: [minor, patch]
+    # Expo / React Native versions track the installed SDK. Let `expo install --fix`
+    # own those majors (see CONTRIBUTING / examples) — Dependabot bumping them in
+    # isolation would break SDK alignment. Security patches still come through as
+    # minor/patch bumps within the current SDK.
+    ignore:
+      - dependency-name: expo
+        update-types: [version-update:semver-major]
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major]
+      - dependency-name: react-native
+        update-types: [version-update:semver-major]
+      - dependency-name: react-native-*
+        update-types: [version-update:semver-major]
+      - dependency-name: '@types/react'
+        update-types: [version-update:semver-major]
+
+  # Keep the GitHub Actions in ci.yml current (clears Node-runtime deprecations).
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly

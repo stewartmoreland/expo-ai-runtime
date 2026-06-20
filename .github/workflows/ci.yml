@@ -20,10 +20,10 @@ jobs:
     name: Lint, typecheck, build & test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run lint
@@ -41,14 +41,14 @@ jobs:
       contents: write # push the release commit + tag, create the GitHub release
       id-token: write # mint the OIDC token for npm Trusted Publisher publishing
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main # check out the branch (not a detached SHA) so the release commit can push back
           fetch-depth: 0 # release-it needs full history + tags to compute the bump
           fetch-tags: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22 # >= 22.14.0 required for npm Trusted Publisher OIDC
+          node-version: 24 # >= 22.14.0 required for npm Trusted Publisher OIDC
           cache: npm
           registry-url: https://registry.npmjs.org # registry config for the OIDC publish (no token needed)
       - run: npm install -g npm@latest # npm >= 11.5.1 required for OIDC trusted publishing
