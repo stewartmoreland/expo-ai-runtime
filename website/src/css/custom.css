@@ -1,0 +1,161 @@
+/**
+ * Expo AI Runtime — documentation theme.
+ *
+ * Palette and primitives are ported verbatim from the example apps'
+ * design tokens (examples/_shared/src/theme.ts) so the docs read like
+ * the product. Dark-only: the toggle is disabled in docusaurus.config.ts.
+ */
+
+/* Self-hosted faces (offline-safe, no external requests). */
+@import '@fontsource/space-grotesk/400.css';
+@import '@fontsource/space-grotesk/500.css';
+@import '@fontsource/space-grotesk/600.css';
+@import '@fontsource/space-grotesk/700.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
+:root {
+  /* --- Brand tokens (examples/_shared/src/theme.ts) --- */
+  --eai-bg: #0b1020;
+  --eai-card: #151b2e;
+  --eai-border: #26304b;
+  --eai-text: #eef2ff;
+  --eai-subtle: #9aa6c4;
+  --eai-accent: #6ea8fe;
+  --eai-ok: #34d399;
+  --eai-warn: #fbbf24;
+  --eai-danger: #f87171;
+  --eai-info: #a78bfa;
+  --eai-input-bg: #1d2540;
+  --eai-radius: 12px;
+
+  /* --- Infima primary scale, generated from the accent --- */
+  --ifm-color-primary: #6ea8fe;
+  --ifm-color-primary-dark: #5396fe;
+  --ifm-color-primary-darker: #4a8ffe;
+  --ifm-color-primary-darkest: #2575fd;
+  --ifm-color-primary-light: #89b9fe;
+  --ifm-color-primary-lighter: #97c1fe;
+  --ifm-color-primary-lightest: #c0dbff;
+
+  /* --- Semantic colors from the badge tones --- */
+  --ifm-color-success: var(--eai-ok);
+  --ifm-color-warning: var(--eai-warn);
+  --ifm-color-danger: var(--eai-danger);
+  --ifm-color-info: var(--eai-info);
+
+  /* --- Typography --- */
+  --ifm-font-family-base: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto,
+    sans-serif;
+  --ifm-heading-font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo,
+    monospace;
+  --ifm-heading-font-weight: 600;
+  --ifm-code-font-size: 90%;
+  --ifm-global-radius: var(--eai-radius);
+
+  --docusaurus-highlighted-code-line-bg: rgba(110, 168, 254, 0.12);
+}
+
+/* Dark-only: identical values, applied to the data-theme that Docusaurus
+   sets on <html>. Keeping both blocks in sync avoids any flash. */
+[data-theme='dark'] {
+  --ifm-color-primary: #6ea8fe;
+  --ifm-color-primary-dark: #5396fe;
+  --ifm-color-primary-darker: #4a8ffe;
+  --ifm-color-primary-darkest: #2575fd;
+  --ifm-color-primary-light: #89b9fe;
+  --ifm-color-primary-lighter: #97c1fe;
+  --ifm-color-primary-lightest: #c0dbff;
+
+  --ifm-background-color: var(--eai-bg);
+  --ifm-background-surface-color: var(--eai-card);
+  --ifm-color-content: var(--eai-text);
+  --ifm-color-content-secondary: var(--eai-subtle);
+  --ifm-heading-color: var(--eai-text);
+
+  --ifm-navbar-background-color: rgba(11, 16, 32, 0.85);
+  --ifm-footer-background-color: #080c18;
+  --ifm-footer-color: var(--eai-subtle);
+  --ifm-footer-link-color: var(--eai-subtle);
+  --ifm-footer-title-color: var(--eai-text);
+
+  --ifm-link-color: var(--eai-accent);
+  --ifm-menu-color: var(--eai-subtle);
+  --ifm-menu-color-active: var(--eai-text);
+  --ifm-toc-link-color: var(--eai-subtle);
+
+  --ifm-card-background-color: var(--eai-card);
+  --ifm-code-background: var(--eai-input-bg);
+  --ifm-pre-background: #0e1426;
+  --ifm-blockquote-color: var(--eai-subtle);
+
+  --ifm-color-emphasis-0: #0b1020;
+  --ifm-color-emphasis-100: #11182b;
+  --ifm-color-emphasis-200: #151b2e;
+  --ifm-color-emphasis-300: var(--eai-border);
+  --ifm-toc-border-color: var(--eai-border);
+  --ifm-table-border-color: var(--eai-border);
+  --ifm-hr-background-color: var(--eai-border);
+
+  --docusaurus-highlighted-code-line-bg: rgba(110, 168, 254, 0.14);
+}
+
+html,
+body {
+  background-color: var(--eai-bg);
+}
+
+/* Tighten headings with the display face. */
+.markdown h1,
+.hero__title {
+  letter-spacing: -0.02em;
+}
+
+/* Navbar: subtle glass over the navy, hairline border. */
+.navbar {
+  border-bottom: 1px solid var(--eai-border);
+  backdrop-filter: saturate(140%) blur(8px);
+}
+
+/* Sidebar active item: accent-tinted pill. */
+.menu__link--active:not(.menu__link--sublist) {
+  background: rgba(110, 168, 254, 0.1);
+}
+
+/* Inline code: pill on the input surface. */
+code {
+  border: 1px solid var(--eai-border);
+  border-radius: 6px;
+}
+
+/* --- Admonitions styled as the app's status cards --- */
+.theme-admonition {
+  background: var(--eai-card);
+  border: 1px solid var(--eai-border);
+  border-left-width: 3px;
+  border-radius: var(--eai-radius);
+}
+.theme-admonition-note,
+.theme-admonition-info {
+  border-left-color: var(--eai-info);
+}
+.theme-admonition-tip {
+  border-left-color: var(--eai-ok);
+}
+.theme-admonition-warning,
+.theme-admonition-caution {
+  border-left-color: var(--eai-warn);
+}
+.theme-admonition-danger {
+  border-left-color: var(--eai-danger);
+}
+
+/* Cards (e.g. doc card grids) match the example app surface. */
+.card {
+  border: 1px solid var(--eai-border);
+  background: var(--eai-card);
+}

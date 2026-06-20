@@ -1,0 +1,137 @@
+/* Homepage — dark navy identity, signature provider-routing ladder. */
+
+.hero {
+  background:
+    radial-gradient(
+      900px 500px at 85% -10%,
+      rgba(110, 168, 254, 0.12),
+      transparent 60%
+    ),
+    var(--eai-bg);
+  border-bottom: 1px solid var(--eai-border);
+  padding: 5rem 0 4rem;
+}
+
+.heroInner {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 3rem;
+  align-items: center;
+}
+
+.eyebrow {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--eai-accent);
+  margin: 0 0 0.75rem;
+}
+
+.title {
+  font-size: clamp(2.1rem, 4.2vw, 3.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 1rem;
+  color: var(--eai-text);
+}
+
+.subtitle {
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: var(--eai-subtle);
+  max-width: 34rem;
+  margin: 0 0 1.75rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.primaryBtn,
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.4rem;
+  border-radius: var(--eai-radius);
+  font-weight: 700;
+  font-size: 0.98rem;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.primaryBtn {
+  background: var(--eai-accent);
+  color: #0b1020;
+}
+.primaryBtn:hover {
+  color: #0b1020;
+  text-decoration: none;
+  transform: translateY(-2px);
+}
+
+.secondaryBtn {
+  background: transparent;
+  color: var(--eai-text);
+  border: 1px solid var(--eai-border);
+}
+.secondaryBtn:hover {
+  color: var(--eai-text);
+  text-decoration: none;
+  border-color: var(--eai-accent);
+}
+
+.heroSignature {
+  min-width: 0;
+}
+
+.main {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.section {
+  padding: 3.5rem 0;
+  border-bottom: 1px solid var(--eai-border);
+}
+.section:last-child {
+  border-bottom: none;
+}
+
+.sectionHead {
+  max-width: 42rem;
+  margin-bottom: 1.75rem;
+}
+
+.sectionTitle {
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5rem;
+}
+
+.sectionLede {
+  color: var(--eai-subtle);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.codeWrap {
+  max-width: 46rem;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    padding: 3.5rem 0 3rem;
+  }
+  .heroInner {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}

@@ -1,0 +1,62 @@
+---
+id: capabilities
+title: Capability detection
+sidebar_position: 3
+---
+
+# Capability detection
+
+Every app-facing feature should check capabilities at runtime before it's shown. A
+device may not support a provider at all, or may support generation but not streaming or
+structured output.
+
+```ts
+export type ExpoAICapabilities = {
+  available: boolean;
+  provider: ExpoAIProvider;
+
+  isOnDevice: boolean;
+  isSystemManagedModel: boolean;
+  sendsPromptOffDevice: boolean;
+
+  supportsTextGeneration: boolean;
+  supportsStreaming: boolean;
+  supportsSessions: boolean;
+  supportsStructuredOutput: boolean;
+  supportsTools: boolean;
+  supportsImageInput: boolean;
+  supportsSpeechInput: boolean;
+
+  supportsSummarization: boolean;
+  supportsRewrite: boolean;
+  supportsProofreading: boolean;
+
+  supportsBringYourOwnModel: boolean;
+  supportsModelDownload: boolean;
+
+  contextWindow?: number;
+
+  reasonUnavailable?: ExpoAIUnavailableReason;
+};
+```
+
+When a provider isn't available, `reasonUnavailable` explains why — so the app can guide
+the user (enable Apple Intelligence, download the model, update the OS) or fall back.
+
+```ts
+export type ExpoAIUnavailableReason =
+  | "unsupported_os_version"
+  | "unsupported_device"
+  | "model_not_downloaded"
+  | "model_initializing"
+  | "apple_intelligence_disabled"
+  | "aicore_unavailable"
+  | "aicore_initializing"
+  | "unsupported_bootloader_state"
+  | "missing_dependency"
+  | "provider_not_configured"
+  | "unknown";
+```
+
+Use `ExpoAI.getCapabilities()` for the active provider, or `ExpoAI.listProviders()` to
+inspect every registered provider and its capabilities.

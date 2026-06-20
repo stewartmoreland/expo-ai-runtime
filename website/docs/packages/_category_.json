@@ -1,0 +1,8 @@
+{
+  "label": "Packages",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "A pure-TypeScript core plus thin native and cloud adapters."
+  }
+}

@@ -1,0 +1,89 @@
+.ladder {
+  margin: 0;
+  padding: 16px;
+  background: var(--eai-card);
+  border: 1px solid var(--eai-border);
+  border-radius: var(--eai-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.caption {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--eai-subtle);
+  margin-bottom: 2px;
+}
+
+.group {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rung {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--eai-bg);
+  border: 1px solid var(--eai-border);
+  border-radius: 10px;
+}
+
+.rungMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.provider {
+  font-size: 0.74rem;
+  color: var(--eai-accent);
+  background: rgba(110, 168, 254, 0.08);
+  border: 1px solid var(--eai-border);
+  border-radius: 6px;
+  padding: 1px 6px;
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.label {
+  color: var(--eai-text);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.meta {
+  color: var(--eai-subtle);
+  font-size: 0.78rem;
+}
+
+/* The dashed device boundary — the one line that carries the product's thesis. */
+.boundary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0;
+  color: var(--eai-subtle);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.boundary::before,
+.boundary::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed var(--eai-border);
+}

@@ -1,0 +1,14 @@
+release:
+  label: Release
+  permalink: /release
+  description: Tagged package releases.
+
+core:
+  label: Core
+  permalink: /core
+  description: Changes to the expo-ai-core package.
+
+native:
+  label: Native
+  permalink: /native
+  description: Changes to the iOS / Android native adapters.

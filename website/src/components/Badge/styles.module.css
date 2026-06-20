@@ -1,0 +1,37 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.ok {
+  color: var(--eai-ok);
+}
+.warn {
+  color: var(--eai-warn);
+}
+.danger {
+  color: var(--eai-danger);
+}
+.info {
+  color: var(--eai-info);
+}
+.neutral {
+  color: var(--eai-subtle);
+}
