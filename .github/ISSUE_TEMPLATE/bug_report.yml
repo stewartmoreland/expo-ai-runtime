@@ -1,0 +1,108 @@
+name: 🐞 Bug report
+description: Report a defect in the Expo AI Runtime
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please fill out the sections below so we can reproduce it quickly.
+        For questions or usage help, use [Discussions](../../discussions) instead.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A clear, concise description of the bug.
+      placeholder: "`ExpoAI.generate()` rejects with UNAVAILABLE even though capabilities report the provider as available."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps. A code snippet or link to a minimal repro is ideal.
+      placeholder: |
+        1. Call `ExpoAI.getCapabilities()`
+        2. Call `ExpoAI.generate({ prompt: "…" })`
+        3. Observe the rejection
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behavior
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which workspace package is affected?
+      multiple: true
+      options:
+        - "@stewmore/expo-ai-core"
+        - expo-ai-apple-foundation-models
+        - expo-ai-android-aicore
+        - "@stewmore/expo-ai-cloud"
+        - "@stewmore/expo-ai-evals"
+        - examples
+        - docs
+        - not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - iOS
+        - Android
+        - web
+        - Node (unit/eval)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider in use
+      multiple: true
+      options:
+        - system-preferred
+        - apple-foundation-models
+        - apple-private-cloud-compute
+        - android-aicore-gemini-nano
+        - litert-lm
+        - cloud
+        - not sure
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Fill in what's relevant. Run `npx expo-env-info` if you have it.
+      value: |
+        - Package version(s):
+        - Expo SDK:
+        - React Native:
+        - Device / OS version:
+        - Dev build or Expo Go:
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Normalized error / logs
+      description: If you got an `ExpoAIError`, paste its `code`, `provider`, `retryable`, and `nativeMessage`. Native logs (Xcode / logcat) help for native modules.
+      render: shell
+    validations:
+      required: false

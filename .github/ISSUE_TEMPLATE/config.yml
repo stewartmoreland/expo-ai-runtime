@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions & usage help
+    url: https://github.com/stewartmoreland/expo-ai-runtime/discussions
+    about: Ask how to use the runtime, share ideas, or get integration help.
+  - name: 📖 Documentation
+    url: https://stewartmoreland.github.io/expo-ai-runtime/
+    about: Quickstart, API reference, and the capability matrix.

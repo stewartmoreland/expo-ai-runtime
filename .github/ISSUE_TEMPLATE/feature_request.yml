@@ -1,0 +1,75 @@
+name: ✨ Feature request
+description: Propose a new capability, provider, or API for the runtime
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! The runtime favors a small, stable public API with replaceable adapters
+        (see `CLAUDE.md` and `docs/prd.md`). Proposals that fit the plugin/adapter model land fastest.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What can't you do today, and why does it matter?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Sketch the API or behavior. TypeScript signatures welcome.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Public API / DX (hooks, helpers)
+        - Provider / adapter
+        - Capability detection
+        - Structured output
+        - Streaming
+        - Sessions
+        - Privacy / routing
+        - Tools / agents
+        - RAG / context
+        - Evals
+        - Docs / examples
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Related roadmap phase (if known)
+      options:
+        - "Phase A — DX & ergonomics"
+        - "Phase B — Breadth & platform currency"
+        - "Phase C — Adoption magnets"
+        - Not sure / none
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Design principles check
+      description: The runtime holds these invariants (PRD §20). Confirm your proposal respects them.
+      options:
+        - label: Capabilities are runtime-detected, never assumed
+        - label: Every result keeps `provider` + `privacy` metadata
+        - label: Sensitive prompts are never silently sent off-device
+        - label: Native methods stay primitive; ergonomics live in TypeScript
