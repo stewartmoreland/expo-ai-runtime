@@ -1,5 +1,10 @@
 # Expo AI Runtime
 
+[![CI](https://github.com/stewartmoreland/expo-ai-runtime/actions/workflows/ci.yml/badge.svg)](https://github.com/stewartmoreland/expo-ai-runtime/actions/workflows/ci.yml)
+[![Native](https://github.com/stewartmoreland/expo-ai-runtime/actions/workflows/native.yml/badge.svg)](https://github.com/stewartmoreland/expo-ai-runtime/actions/workflows/native.yml)
+[![codecov](https://codecov.io/gh/stewartmoreland/expo-ai-runtime/branch/main/graph/badge.svg)](https://codecov.io/gh/stewartmoreland/expo-ai-runtime)
+[![skills.sh](https://skills.sh/b/stewartmoreland/expo-ai-runtime)](https://skills.sh/stewartmoreland/expo-ai-runtime)
+
 A **mobile-native AI runtime** for Expo and React Native. One TypeScript API over:
 
 - **Apple Foundation Models** (on-device, iOS 26+)
@@ -68,6 +73,16 @@ npx expo run:android   # supported device for on-device; otherwise cloud fallbac
 ```
 
 See [`docs/prd.md`](docs/prd.md) for the full product definition and roadmap.
+
+## Use as an agent skill
+
+This repo ships an [agent skill](skills/expo-ai-runtime) that teaches AI coding agents how to
+build with this runtime — wiring providers, capability detection, structured output, sessions,
+and the privacy-aware routing rules. Add it to your agent with the [skills](https://skills.sh) CLI:
+
+```bash
+npx skills add stewartmoreland/expo-ai-runtime
+```
 
 ## License
 
