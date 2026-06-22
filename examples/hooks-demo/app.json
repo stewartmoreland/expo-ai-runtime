@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Hooks Demo",
+    "slug": "expo-ai-hooks-demo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.stewmore.expoai.hooksdemo"
+    },
+    "android": {
+      "package": "com.stewmore.expoai.hooksdemo"
+    },
+    "plugins": ["@stewmore/expo-ai-apple-foundation-models", "@stewmore/expo-ai-android-aicore"]
+  }
+}
