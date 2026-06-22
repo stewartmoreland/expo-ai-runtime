@@ -59,6 +59,33 @@ describe('parsePartialJson', () => {
     expect(parsePartialJson('Here you go: {"name":"Ada"}')).toEqual({ name: 'Ada' });
   });
 
+  it('takes the first complete value when trailing prose follows', () => {
+    expect(parsePartialJson('{"name":"Ada","age":36}\n\nThat is the person.')).toEqual({
+      name: 'Ada',
+      age: 36,
+    });
+  });
+
+  it('handles a complete fenced JSON block', () => {
+    expect(parsePartialJson('```json\n{"name":"Ada","age":36}\n```')).toEqual({
+      name: 'Ada',
+      age: 36,
+    });
+  });
+
+  it('does not hang on a complete object followed by a long junk tail', () => {
+    const input = '{"name":"Ada","age":36}' + 'x'.repeat(20000);
+    const before = performance.now();
+    expect(parsePartialJson(input)).toEqual({ name: 'Ada', age: 36 });
+    // O(n): comfortably under a few ms; guard against the old O(n^2) backoff.
+    expect(performance.now() - before).toBeLessThan(200);
+  });
+
+  it('retreats past a mismatched closer rather than corrupting data', () => {
+    // `[1` is open but `}` does not match — drop the malformed array entry.
+    expect(parsePartialJson('{"a":[1}')).toEqual({ a: [] });
+  });
+
   it('returns {} for an object opener only', () => {
     expect(parsePartialJson('{')).toEqual({});
   });
@@ -210,6 +237,30 @@ describe('ExpoAI.streamObject', () => {
     });
 
     await expect(handle.object).rejects.toMatchObject({ provider: 'cloud' });
+  });
+
+  it('fails every view together when validation fails after streaming completes', async () => {
+    // Streams syntactically-valid-but-non-conforming JSON; with no repair budget
+    // the object cannot be produced. All four views must surface the failure.
+    registerAdapter(
+      createMockAdapter({
+        provider: 'cloud',
+        respondWith: '{"name": "Ada"}', // missing required `age`
+        supportsStreaming: true,
+      }),
+    );
+
+    const handle = ExpoAI.streamObject({
+      prompt: 'a person',
+      schema: personSchema,
+      provider: 'cloud',
+      maxRepairAttempts: 0,
+    });
+
+    await expect(handle.object).rejects.toMatchObject({ provider: 'cloud' });
+    await expect(handle.result).rejects.toMatchObject({ provider: 'cloud' });
+    await expect(collect(handle.textStream)).rejects.toBeDefined();
+    await expect(collect(handle.partialObjectStream)).rejects.toBeDefined();
   });
 
   it('works when the provider does not stream (single-shot emulation)', async () => {
