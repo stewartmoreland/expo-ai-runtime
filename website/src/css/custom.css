@@ -48,11 +48,9 @@
   --ifm-color-info: var(--eai-info);
 
   /* --- Typography --- */
-  --ifm-font-family-base: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto,
-    sans-serif;
+  --ifm-font-family-base: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --ifm-heading-font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
-  --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo,
-    monospace;
+  --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   --ifm-heading-font-weight: 600;
   --ifm-code-font-size: 90%;
   --ifm-global-radius: var(--eai-radius);
@@ -169,12 +167,8 @@ code {
 .docusaurus-mermaid-container {
   margin: 1.75rem 0;
   padding: 1.5rem 1.25rem;
-  background: linear-gradient(
-      180deg,
-      rgba(110, 168, 254, 0.06),
-      rgba(110, 168, 254, 0) 120px
-    ),
-    var(--eai-bg);
+  background:
+    linear-gradient(180deg, rgba(110, 168, 254, 0.06), rgba(110, 168, 254, 0) 120px), var(--eai-bg);
   border: 1px solid var(--eai-border);
   border-radius: var(--eai-radius);
   overflow-x: auto;
@@ -193,7 +187,9 @@ code {
    reduced-motion preference below. */
 .docusaurus-mermaid-container .node :is(rect, polygon, circle, path),
 .docusaurus-mermaid-container .node .label-container {
-  transition: stroke 160ms ease, filter 160ms ease;
+  transition:
+    stroke 160ms ease,
+    filter 160ms ease;
 }
 .docusaurus-mermaid-container .node:hover :is(rect, polygon, circle) {
   stroke: var(--eai-accent) !important;

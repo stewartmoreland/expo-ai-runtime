@@ -16,7 +16,7 @@
 # Recurse into the per-app subfolders (depth 1). This intentionally does NOT
 # match config.yaml (depth 0) or README.md.
 flows:
-  - "*/*.yaml"
+  - '*/*.yaml'
 
 testOutputDir: maestro_output
 

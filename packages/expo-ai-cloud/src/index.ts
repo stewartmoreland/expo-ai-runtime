@@ -6,15 +6,15 @@
  * when an app opts into fallback (`fallback: "cloud"`).
  */
 
-import { registerAdapter } from "@stewmore/expo-ai-core";
+import { registerAdapter } from '@stewmore/expo-ai-core';
 
-import { CloudAdapter, type CloudProviderConfig } from "./cloud-provider.js";
+import { CloudAdapter, type CloudProviderConfig } from './cloud-provider.js';
 
 export {
   CloudAdapter,
   type CloudProviderConfig,
   type CloudProviderKind,
-} from "./cloud-provider.js";
+} from './cloud-provider.js';
 
 let current: CloudAdapter | undefined;
 

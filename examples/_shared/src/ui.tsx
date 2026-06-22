@@ -1,5 +1,5 @@
-import { PRIVACY_COPY, type ExpoAIPrivacyInfo, type ExpoAIProvider } from "@stewmore/expo-ai-core";
-import type { ReactNode } from "react";
+import { PRIVACY_COPY, type ExpoAIPrivacyInfo, type ExpoAIProvider } from '@stewmore/expo-ai-core';
+import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,9 +9,9 @@ import {
   Text,
   TextInput,
   View,
-} from "react-native";
+} from 'react-native';
 
-import { theme, toneColor, type BadgeTone } from "./theme";
+import { theme, toneColor, type BadgeTone } from './theme';
 
 /**
  * Derive a stable, selector-safe testID fragment from human text so Maestro
@@ -21,11 +21,19 @@ import { theme, toneColor, type BadgeTone } from "./theme";
 export function slug(s: string): string {
   return s
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
-export function Screen({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+export function Screen({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+}) {
   return (
     <SafeAreaView style={styles.safe} testID={`screen-${slug(title)}`}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
@@ -48,7 +56,7 @@ export function Card({ title, children }: { title?: string; children: ReactNode 
   );
 }
 
-export function Badge({ label, tone = "neutral" }: { label: string; tone?: BadgeTone }) {
+export function Badge({ label, tone = 'neutral' }: { label: string; tone?: BadgeTone }) {
   const color = toneColor[tone];
   return (
     <View style={[styles.badge, { borderColor: color }]} testID={`badge-${slug(label)}`}>
@@ -82,7 +90,7 @@ export function PromptInput(props: {
 }) {
   return (
     <TextInput
-      testID={props.testID ?? "prompt-input"}
+      testID={props.testID ?? 'prompt-input'}
       style={[styles.input, props.multiline ? styles.inputMultiline : null]}
       value={props.value}
       onChangeText={props.onChangeText}
@@ -113,19 +121,29 @@ export function PrimaryButton({
       onPress={onPress}
       disabled={isDisabled}
     >
-      {loading ? <ActivityIndicator color="#0b1020" /> : <Text style={styles.buttonText}>{title}</Text>}
+      {loading ? (
+        <ActivityIndicator color="#0b1020" />
+      ) : (
+        <Text style={styles.buttonText}>{title}</Text>
+      )}
     </Pressable>
   );
 }
 
 export function privacyTone(privacy: ExpoAIPrivacyInfo): BadgeTone {
-  if (privacy.privacyMode === "on-device") return "ok";
-  if (privacy.privacyMode === "apple-private-cloud-compute") return "info";
-  if (privacy.privacyMode === "third-party-cloud") return "warn";
-  return "neutral";
+  if (privacy.privacyMode === 'on-device') return 'ok';
+  if (privacy.privacyMode === 'apple-private-cloud-compute') return 'info';
+  if (privacy.privacyMode === 'third-party-cloud') return 'warn';
+  return 'neutral';
 }
 
-export function ProviderPrivacy({ provider, privacy }: { provider: ExpoAIProvider; privacy: ExpoAIPrivacyInfo }) {
+export function ProviderPrivacy({
+  provider,
+  privacy,
+}: {
+  provider: ExpoAIProvider;
+  privacy: ExpoAIPrivacyInfo;
+}) {
   return (
     <View style={{ gap: theme.space(1) }}>
       <Row>
@@ -140,7 +158,7 @@ export function ProviderPrivacy({ provider, privacy }: { provider: ExpoAIProvide
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.color.bg },
   scroll: { padding: theme.space(2), gap: theme.space(2) },
-  title: { color: theme.color.text, fontSize: 26, fontWeight: "700" },
+  title: { color: theme.color.text, fontSize: 26, fontWeight: '700' },
   subtitle: { color: theme.color.subtle, fontSize: 14, marginTop: -theme.space(1) },
   card: {
     backgroundColor: theme.color.card,
@@ -150,11 +168,11 @@ const styles = StyleSheet.create({
     padding: theme.space(2),
     gap: theme.space(1.5),
   },
-  cardTitle: { color: theme.color.text, fontSize: 16, fontWeight: "600" },
-  row: { flexDirection: "row", flexWrap: "wrap", gap: theme.space(1), alignItems: "center" },
+  cardTitle: { color: theme.color.text, fontSize: 16, fontWeight: '600' },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space(1), alignItems: 'center' },
   badge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
     borderWidth: 1,
     borderRadius: 999,
@@ -162,10 +180,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  badgeText: { fontSize: 12, fontWeight: "600" },
-  kv: { flexDirection: "row", justifyContent: "space-between", gap: theme.space(2) },
+  badgeText: { fontSize: 12, fontWeight: '600' },
+  kv: { flexDirection: 'row', justifyContent: 'space-between', gap: theme.space(2) },
   kvLabel: { color: theme.color.subtle, fontSize: 13 },
-  kvValue: { color: theme.color.text, fontSize: 13, fontWeight: "600", flexShrink: 1, textAlign: "right" },
+  kvValue: {
+    color: theme.color.text,
+    fontSize: 13,
+    fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
   input: {
     backgroundColor: theme.color.inputBg,
     borderColor: theme.color.cardBorder,
@@ -175,15 +199,15 @@ const styles = StyleSheet.create({
     padding: theme.space(1.5),
     fontSize: 15,
   },
-  inputMultiline: { minHeight: 96, textAlignVertical: "top" },
+  inputMultiline: { minHeight: 96, textAlignVertical: 'top' },
   button: {
     backgroundColor: theme.color.accent,
     borderRadius: theme.radius,
     paddingVertical: theme.space(1.5),
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: "#0b1020", fontSize: 16, fontWeight: "700" },
+  buttonText: { color: '#0b1020', fontSize: 16, fontWeight: '700' },
   privacyCopy: { color: theme.color.subtle, fontSize: 13 },
 });

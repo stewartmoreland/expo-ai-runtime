@@ -16,12 +16,12 @@ Listens on `http://localhost:8787` (override with `PORT`).
 
 ## Modes
 
-| Env | Mode |
-| --- | --- |
-| _(none)_ | **mock** — canned replies; schema requests return a schema-shaped sample |
-| `OPENAI_API_KEY` | proxy OpenAI-compatible `/chat/completions` (`OPENAI_BASE_URL`, `OPENAI_MODEL`) |
-| `ANTHROPIC_API_KEY` | proxy Anthropic `/v1/messages` (`ANTHROPIC_MODEL`) |
-| `EXPO_AI_FORCE_MOCK=1` | force mock even if keys are set |
+| Env                    | Mode                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| _(none)_               | **mock** — canned replies; schema requests return a schema-shaped sample        |
+| `OPENAI_API_KEY`       | proxy OpenAI-compatible `/chat/completions` (`OPENAI_BASE_URL`, `OPENAI_MODEL`) |
+| `ANTHROPIC_API_KEY`    | proxy Anthropic `/v1/messages` (`ANTHROPIC_MODEL`)                              |
+| `EXPO_AI_FORCE_MOCK=1` | force mock even if keys are set                                                 |
 
 `OPENAI_BASE_URL` lets you point at any OpenAI-compatible server (OpenRouter,
 Ollama, LM Studio, a local proxy, …).
@@ -39,10 +39,10 @@ Request body: `{ prompt, instructions?, temperature?, maxOutputTokens?, schema?,
 ## Point the app at it
 
 ```ts
-import { configureCloud } from "@stewmore/expo-ai-cloud";
-import { fetch as expoFetch } from "expo/fetch";
+import { configureCloud } from '@stewmore/expo-ai-cloud';
+import { fetch as expoFetch } from 'expo/fetch';
 
-configureCloud({ endpoint: "http://localhost:8787", fetch: expoFetch });
+configureCloud({ endpoint: 'http://localhost:8787', fetch: expoFetch });
 ```
 
 > On a physical device use your machine's LAN IP instead of `localhost`.

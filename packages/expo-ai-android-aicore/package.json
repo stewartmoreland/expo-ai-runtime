@@ -23,8 +23,20 @@
     "android",
     "expo-module.config.json"
   ],
-  "sideEffects": ["./build/index.js", "./src/index.ts"],
-  "keywords": ["expo", "react-native", "ai", "android", "gemini-nano", "ml-kit", "aicore", "on-device"],
+  "sideEffects": [
+    "./build/index.js",
+    "./src/index.ts"
+  ],
+  "keywords": [
+    "expo",
+    "react-native",
+    "ai",
+    "android",
+    "gemini-nano",
+    "ml-kit",
+    "aicore",
+    "on-device"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepack": "npm run build",

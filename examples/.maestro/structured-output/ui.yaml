@@ -6,18 +6,18 @@ tags:
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "title-structured-output"
+    id: 'title-structured-output'
 - assertVisible:
-    id: "card-schema"
+    id: 'card-schema'
 # The pretty-printed schema JSON contains the key "projectName". Wrapped in .*
 # because this Maestro/iOS build matches text (accessibilityText) as a
 # FULL-string regex, so a bare substring of the JSON blob never matches.
-- assertVisible: ".*projectName.*"
+- assertVisible: '.*projectName.*'
 - assertVisible:
-    id: "card-source-text"
+    id: 'card-source-text'
 - tapOn:
-    id: "prompt-input"
-- inputText: "Project Atlas, Q4, $250k."
+    id: 'prompt-input'
+- inputText: 'Project Atlas, Q4, $250k.'
 - hideKeyboard
 - assertVisible:
-    id: "button-extract-object"
+    id: 'button-extract-object'

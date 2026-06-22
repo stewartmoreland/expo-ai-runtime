@@ -15,19 +15,19 @@ import type {
   NormalizedGenerateRequest,
   NormalizedObjectRequest,
   StreamHandle,
-} from "./adapter.js";
-import { ExpoAIError } from "./errors.js";
-import { finalizeResult } from "./result.js";
-import { selectAvailableAdapter } from "./provider-router.js";
-import { createStreamIterable, type StreamSource } from "./stream-bridge.js";
-import { generateValidatedObject } from "./structured-output.js";
+} from './adapter.js';
+import { ExpoAIError } from './errors.js';
+import { finalizeResult } from './result.js';
+import { selectAvailableAdapter } from './provider-router.js';
+import { createStreamIterable, type StreamSource } from './stream-bridge.js';
+import { generateValidatedObject } from './structured-output.js';
 import type {
   CreateSessionOptions,
   ExpoAIProvider,
   ExpoAISession,
   SessionGenerateObjectOptions,
   SessionGenerateOptions,
-} from "./types.js";
+} from './types.js';
 
 let sessionCounter = 0;
 function newSessionId(): string {
@@ -36,7 +36,7 @@ function newSessionId(): string {
   return `session_${sessionCounter}_${suffix}`;
 }
 
-type Turn = { role: "user" | "assistant"; content: string };
+type Turn = { role: 'user' | 'assistant'; content: string };
 
 /** An emulated session over a stateless adapter: transcript replayed as a prefix. */
 class EmulatedSession implements AdapterSession {
@@ -54,11 +54,11 @@ class EmulatedSession implements AdapterSession {
   private compose(prompt: string): string {
     const lines: string[] = [];
     for (const turn of this.history) {
-      lines.push(`${turn.role === "user" ? "User" : "Assistant"}: ${turn.content}`);
+      lines.push(`${turn.role === 'user' ? 'User' : 'Assistant'}: ${turn.content}`);
     }
     lines.push(`User: ${prompt}`);
-    lines.push("Assistant:");
-    return lines.join("\n");
+    lines.push('Assistant:');
+    return lines.join('\n');
   }
 
   private merge(req: NormalizedGenerateRequest): NormalizedGenerateRequest {
@@ -108,7 +108,7 @@ class EmulatedSession implements AdapterSession {
       };
     }
 
-    let accumulated = "";
+    let accumulated = '';
     return this.adapter.stream(this.merge(req), {
       onStart: handlers.onStart,
       onDelta: (text) => {
@@ -124,8 +124,8 @@ class EmulatedSession implements AdapterSession {
   }
 
   commitTurn(userPrompt: string, assistantText: string): void {
-    this.history.push({ role: "user", content: userPrompt });
-    this.history.push({ role: "assistant", content: assistantText });
+    this.history.push({ role: 'user', content: userPrompt });
+    this.history.push({ role: 'assistant', content: assistantText });
   }
 
   async reset(): Promise<void> {
@@ -231,7 +231,8 @@ function toExpoAISession(
 }
 
 export async function createSession(options: CreateSessionOptions = {}): Promise<ExpoAISession> {
-  const selectOptions: { provider?: ExpoAIProvider; fallback?: CreateSessionOptions["fallback"] } = {};
+  const selectOptions: { provider?: ExpoAIProvider; fallback?: CreateSessionOptions['fallback'] } =
+    {};
   if (options.provider !== undefined) selectOptions.provider = options.provider;
   if (options.fallback !== undefined) selectOptions.fallback = options.fallback;
 

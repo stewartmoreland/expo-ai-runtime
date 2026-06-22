@@ -5,7 +5,7 @@
  * gate features at runtime before showing them.
  */
 
-import { getAdapter, getAdapters, getRegisteredProviders } from "./registry.js";
+import { getAdapter, getAdapters, getRegisteredProviders } from './registry.js';
 import {
   defaultProviderPriority,
   type ExpoAIAvailability,
@@ -13,7 +13,7 @@ import {
   type ExpoAIProvider,
   type ExpoAIProviderInfo,
   type ExpoAIUnavailableReason,
-} from "./types.js";
+} from './types.js';
 
 /** Registered providers, default-priority first, then any extras. */
 function orderedRegisteredProviders(): ExpoAIProvider[] {
@@ -60,7 +60,7 @@ export function unavailableCapabilities(
 export async function getAvailability(): Promise<ExpoAIAvailability> {
   const providers = orderedRegisteredProviders();
   if (providers.length === 0) {
-    return { available: false, provider: "none", reasonUnavailable: "provider_not_configured" };
+    return { available: false, provider: 'none', reasonUnavailable: 'provider_not_configured' };
   }
 
   let firstReason: ExpoAIAvailability | undefined;
@@ -71,14 +71,14 @@ export async function getAvailability(): Promise<ExpoAIAvailability> {
     if (availability.available) return availability;
     firstReason ??= availability;
   }
-  return firstReason ?? { available: false, provider: "none", reasonUnavailable: "unknown" };
+  return firstReason ?? { available: false, provider: 'none', reasonUnavailable: 'unknown' };
 }
 
 /** Capabilities of the best currently-available provider. */
 export async function getCapabilities(): Promise<ExpoAICapabilities> {
   const providers = orderedRegisteredProviders();
   if (providers.length === 0) {
-    return unavailableCapabilities("none", "provider_not_configured");
+    return unavailableCapabilities('none', 'provider_not_configured');
   }
 
   let firstUnavailable: ExpoAICapabilities | undefined;
@@ -89,7 +89,7 @@ export async function getCapabilities(): Promise<ExpoAICapabilities> {
     if (capabilities.available) return capabilities;
     firstUnavailable ??= capabilities;
   }
-  return firstUnavailable ?? unavailableCapabilities("none", "unknown");
+  return firstUnavailable ?? unavailableCapabilities('none', 'unknown');
 }
 
 /** Every registered provider and its current capabilities. */

@@ -10,21 +10,21 @@ tags:
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "title-cloud-fallback"
+    id: 'title-cloud-fallback'
 # Defaults already satisfy the scenario (sensitive ON, fallback "none"), but
 # set them explicitly so the flow is self-contained and order-independent.
 - assertVisible:
-    id: "switch-sensitive"
+    id: 'switch-sensitive'
     checked: true
 - tapOn:
-    id: "chip-none"
+    id: 'chip-none'
 - tapOn:
-    id: "button-generate"
+    id: 'button-generate'
 # Blocked path: error.code === "UNAVAILABLE" => card title "Blocked (no leak)"
 # and a badge whose label is the code "UNAVAILABLE".
 - extendedWaitUntil:
     visible:
-      id: "badge-unavailable"
+      id: 'badge-unavailable'
     timeout: 30000
 # Assert the human-readable card title "Blocked (no leak)". Patterns are wrapped
 # in .* because this Maestro/iOS build matches text (accessibilityText) as a
@@ -32,11 +32,11 @@ tags:
 # parens. Scroll it into view in case the blocked card renders below the fold.
 - scrollUntilVisible:
     element:
-      text: ".*Blocked.*"
+      text: '.*Blocked.*'
     direction: DOWN
     timeout: 30000
     visibilityPercentage: 30
-- assertVisible: ".*no leak.*"
+- assertVisible: '.*no leak.*'
 # Nothing was sent to cloud, so no third-party badge appears.
 - assertNotVisible:
-    id: "badge-third-party-cloud"
+    id: 'badge-third-party-cloud'

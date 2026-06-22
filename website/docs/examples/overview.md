@@ -9,13 +9,13 @@ sidebar_position: 1
 Four focused Expo apps demonstrate the runtime, plus a reference cloud server. They share
 UI and setup via a private `_shared` package.
 
-| App | Demonstrates |
-| --- | --- |
-| `basic-generate` | Capability card + `ExpoAI.generate` with provider/privacy badges and errors |
-| `structured-output` | `ExpoAI.generateObject` with JSON-schema validation + repair |
-| `streaming-chat` | `ExpoAI.stream` with live tokens and a Stop button |
-| `cloud-fallback` | Sensitivity gating + explicit, privacy-aware cloud routing |
-| [`server`](./reference-server.md) | Reference cloud backend (mock-by-default) |
+| App                               | Demonstrates                                                                |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| `basic-generate`                  | Capability card + `ExpoAI.generate` with provider/privacy badges and errors |
+| `structured-output`               | `ExpoAI.generateObject` with JSON-schema validation + repair                |
+| `streaming-chat`                  | `ExpoAI.stream` with live tokens and a Stop button                          |
+| `cloud-fallback`                  | Sensitivity gating + explicit, privacy-aware cloud routing                  |
+| [`server`](./reference-server.md) | Reference cloud backend (mock-by-default)                                   |
 
 ## Run an app
 

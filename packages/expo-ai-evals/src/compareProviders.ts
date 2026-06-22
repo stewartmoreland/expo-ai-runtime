@@ -1,7 +1,7 @@
-import type { ExpoAIProvider } from "@stewmore/expo-ai-core";
+import type { ExpoAIProvider } from '@stewmore/expo-ai-core';
 
-import { runEvalCase } from "./runEvalSuite.js";
-import type { EvalCase, EvalResult } from "./types.js";
+import { runEvalCase } from './runEvalSuite.js';
+import type { EvalCase, EvalResult } from './types.js';
 
 /**
  * Run the same cases forced through each provider, so output quality / latency /
@@ -16,7 +16,7 @@ export async function compareProviders(
   for (const provider of providers) {
     const results: EvalResult[] = [];
     for (const testCase of cases) {
-      if (testCase.kind === "privacy") continue;
+      if (testCase.kind === 'privacy') continue;
       results.push(await runEvalCase({ ...testCase, provider }));
     }
     comparison[provider] = results;

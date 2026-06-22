@@ -7,23 +7,23 @@ tags:
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "title-structured-output"
+    id: 'title-structured-output'
 - tapOn:
-    id: "button-extract-object"
+    id: 'button-extract-object'
 - extendedWaitUntil:
     visible:
-      id: "card-extracted-object"
+      id: 'card-extracted-object'
     timeout: 30000
 # Badge "schema valid" (id badge-schema-valid) renders only on a valid object.
 - assertVisible:
-    id: "badge-schema-valid"
+    id: 'badge-schema-valid'
 # The rendered JSON object contains the sampled key projectName. It renders below
 # the fold, so scroll it into view. Pattern wrapped in .* because this
 # Maestro/iOS build matches text (accessibilityText) as a FULL-string regex, not
 # a substring.
 - scrollUntilVisible:
     element:
-      text: ".*projectName.*"
+      text: '.*projectName.*'
     direction: DOWN
     timeout: 30000
     visibilityPercentage: 30

@@ -7,43 +7,43 @@
 
 /** Every provider the runtime knows how to route to. */
 export type ExpoAIProvider =
-  | "system-preferred"
-  | "apple-foundation-models"
-  | "apple-private-cloud-compute"
-  | "android-aicore-gemini-nano"
-  | "litert-lm"
-  | "cloud"
-  | "none";
+  | 'system-preferred'
+  | 'apple-foundation-models'
+  | 'apple-private-cloud-compute'
+  | 'android-aicore-gemini-nano'
+  | 'litert-lm'
+  | 'cloud'
+  | 'none';
 
 /** Default order the router walks when no explicit provider is requested. */
 export const defaultProviderPriority: ExpoAIProvider[] = [
-  "apple-foundation-models",
-  "apple-private-cloud-compute",
-  "android-aicore-gemini-nano",
-  "litert-lm",
-  "cloud",
+  'apple-foundation-models',
+  'apple-private-cloud-compute',
+  'android-aicore-gemini-nano',
+  'litert-lm',
+  'cloud',
 ];
 
 /** Why a provider reports itself unavailable. */
 export type ExpoAIUnavailableReason =
-  | "unsupported_os_version"
-  | "unsupported_device"
-  | "model_not_downloaded"
-  | "model_initializing"
-  | "apple_intelligence_disabled"
-  | "aicore_unavailable"
-  | "aicore_initializing"
-  | "unsupported_bootloader_state"
-  | "missing_dependency"
-  | "provider_not_configured"
-  | "unknown";
+  | 'unsupported_os_version'
+  | 'unsupported_device'
+  | 'model_not_downloaded'
+  | 'model_initializing'
+  | 'apple_intelligence_disabled'
+  | 'aicore_unavailable'
+  | 'aicore_initializing'
+  | 'unsupported_bootloader_state'
+  | 'missing_dependency'
+  | 'provider_not_configured'
+  | 'unknown';
 
 /** Where, broadly, a prompt was processed. Drives privacy UI copy. */
 export type ExpoAIPrivacyMode =
-  | "on-device"
-  | "apple-private-cloud-compute"
-  | "third-party-cloud"
-  | "unknown";
+  | 'on-device'
+  | 'apple-private-cloud-compute'
+  | 'third-party-cloud'
+  | 'unknown';
 
 /** Privacy metadata attached to every result. */
 export type ExpoAIPrivacyInfo = {
@@ -96,16 +96,16 @@ export type ExpoAIProviderInfo = {
 };
 
 /** Fallback policy for a request. */
-export type ExpoAIFallback = "none" | "cloud" | "any";
+export type ExpoAIFallback = 'none' | 'cloud' | 'any';
 
 /** Why generation stopped. */
 export type ExpoAIFinishReason =
-  | "stop"
-  | "length"
-  | "cancelled"
-  | "safety"
-  | "tool_calls"
-  | "unknown";
+  | 'stop'
+  | 'length'
+  | 'cancelled'
+  | 'safety'
+  | 'tool_calls'
+  | 'unknown';
 
 /** Token accounting, when a provider reports it. */
 export type ExpoAIUsage = {
@@ -117,8 +117,8 @@ export type ExpoAIUsage = {
 /** Bring-your-own-model descriptor (LiteRT-LM and friends; future). */
 export type LocalModelConfig = {
   id: string;
-  runtime: "litert-lm";
-  source: "bundled" | "remote" | "huggingface" | "file";
+  runtime: 'litert-lm';
+  source: 'bundled' | 'remote' | 'huggingface' | 'file';
   uri?: string;
   checksum?: string;
   sizeBytes?: number;
@@ -151,13 +151,13 @@ export type GenerateOptions = {
 
 /** A loose, runtime JSON Schema (the subset the runtime validates). */
 export type JSONSchemaType =
-  | "object"
-  | "array"
-  | "string"
-  | "number"
-  | "integer"
-  | "boolean"
-  | "null";
+  | 'object'
+  | 'array'
+  | 'string'
+  | 'number'
+  | 'integer'
+  | 'boolean'
+  | 'null';
 
 export interface JSONSchema {
   type?: JSONSchemaType | JSONSchemaType[];
@@ -200,9 +200,9 @@ export type GenerateResult = {
 
 /** A chunk yielded by {@link ExpoAI.stream}. The iterable throws on error. */
 export type GenerateChunk =
-  | { type: "start"; provider: ExpoAIProvider; privacy: ExpoAIPrivacyInfo }
-  | { type: "delta"; text: string }
-  | { type: "done"; result: GenerateResult };
+  | { type: 'start'; provider: ExpoAIProvider; privacy: ExpoAIPrivacyInfo }
+  | { type: 'delta'; text: string }
+  | { type: 'done'; result: GenerateResult };
 
 /* ------------------------------------------------------------------ */
 /* Sessions (docs/prd.md §8)                                          */
@@ -247,7 +247,7 @@ export interface ExpoAISession {
 export type SummarizeOptions = {
   text: string;
   /** Hint for how long the summary should be. */
-  length?: "short" | "medium" | "long";
+  length?: 'short' | 'medium' | 'long';
   provider?: ExpoAIProvider;
   fallback?: ExpoAIFallback;
   sensitive?: boolean;
@@ -255,12 +255,12 @@ export type SummarizeOptions = {
 };
 
 export type RewriteStyle =
-  | "rephrase"
-  | "shorten"
-  | "elaborate"
-  | "friendly"
-  | "professional"
-  | "emojify";
+  | 'rephrase'
+  | 'shorten'
+  | 'elaborate'
+  | 'friendly'
+  | 'professional'
+  | 'emojify';
 
 export type RewriteOptions = {
   text: string;

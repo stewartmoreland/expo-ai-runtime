@@ -21,19 +21,19 @@ export class ExpoAIError extends Error {
 
 ```ts
 export type ExpoAIErrorCode =
-  | "UNAVAILABLE"
-  | "UNSUPPORTED_DEVICE"
-  | "MODEL_NOT_READY"
-  | "MODEL_DOWNLOAD_REQUIRED"
-  | "USER_SETTING_REQUIRED"
-  | "INVALID_PROMPT"
-  | "CONTEXT_WINDOW_EXCEEDED"
-  | "SAFETY_BLOCKED"
-  | "RATE_LIMITED"
-  | "CANCELLED"
-  | "TIMEOUT"
-  | "NATIVE_PROVIDER_ERROR"
-  | "UNKNOWN";
+  | 'UNAVAILABLE'
+  | 'UNSUPPORTED_DEVICE'
+  | 'MODEL_NOT_READY'
+  | 'MODEL_DOWNLOAD_REQUIRED'
+  | 'USER_SETTING_REQUIRED'
+  | 'INVALID_PROMPT'
+  | 'CONTEXT_WINDOW_EXCEEDED'
+  | 'SAFETY_BLOCKED'
+  | 'RATE_LIMITED'
+  | 'CANCELLED'
+  | 'TIMEOUT'
+  | 'NATIVE_PROVIDER_ERROR'
+  | 'UNKNOWN';
 ```
 
 - **`retryable`** tells the app whether trying again may succeed (e.g. AICore still

@@ -8,7 +8,7 @@ tags: [release, core, native]
 The first cut of the Expo AI Runtime is here: one TypeScript API over Apple Foundation
 Models, Android Gemini Nano, and an explicit cloud fallback.
 
-{/* truncate */}
+{/_ truncate _/}
 
 ## What's in this release
 

@@ -15,14 +15,14 @@ import type {
   NormalizedGenerateRequest,
   NormalizedObjectRequest,
   StreamHandle,
-} from "./adapter.js";
-import { ExpoAIError } from "./errors.js";
+} from './adapter.js';
+import { ExpoAIError } from './errors.js';
 import type {
   ExpoAIAvailability,
   ExpoAICapabilities,
   ExpoAIProvider,
   ExpoAIUnavailableReason,
-} from "./types.js";
+} from './types.js';
 
 export type MockAdapterConfig = {
   provider?: ExpoAIProvider;
@@ -45,7 +45,7 @@ export type MockAdapterConfig = {
   delayMs?: number;
 };
 
-const DEFAULT_CAPABILITIES: Omit<ExpoAICapabilities, "provider"> = {
+const DEFAULT_CAPABILITIES: Omit<ExpoAICapabilities, 'provider'> = {
   available: true,
   isOnDevice: true,
   isSystemManagedModel: true,
@@ -76,7 +76,7 @@ export class MockAdapter implements ExpoAIAdapter {
   proofread?: (req: AdapterTaskRequest) => Promise<AdapterGenerateResult>;
 
   constructor(private readonly config: MockAdapterConfig = {}) {
-    this.provider = config.provider ?? "cloud";
+    this.provider = config.provider ?? 'cloud';
 
     this.generate = (req) => this.produce(req.prompt);
 
@@ -87,15 +87,15 @@ export class MockAdapter implements ExpoAIAdapter {
       this.generateObject = (req) =>
         Promise.resolve({
           text:
-            typeof config.objectText === "function"
+            typeof config.objectText === 'function'
               ? config.objectText(req)
               : (config.objectText as string),
-          finishReason: "stop",
+          finishReason: 'stop',
         });
     }
     if (config.supportsTasks) {
       this.summarize = (req) => this.produce(`summary of: ${req.text}`);
-      this.rewrite = (req) => this.produce(`rewritten (${req.style ?? "rephrase"}): ${req.text}`);
+      this.rewrite = (req) => this.produce(`rewritten (${req.style ?? 'rephrase'}): ${req.text}`);
       this.proofread = (req) => this.produce(`proofread: ${req.text}`);
     }
   }
@@ -104,7 +104,7 @@ export class MockAdapter implements ExpoAIAdapter {
     const available = this.config.available ?? true;
     const availability: ExpoAIAvailability = { available, provider: this.provider };
     if (!available) {
-      availability.reasonUnavailable = this.config.reasonUnavailable ?? "unknown";
+      availability.reasonUnavailable = this.config.reasonUnavailable ?? 'unknown';
     }
     return availability;
   }
@@ -120,7 +120,7 @@ export class MockAdapter implements ExpoAIAdapter {
 
   private replyFor(prompt: string): string {
     if (this.config.respondWith === undefined) return `[mock:${this.provider}] ${prompt}`;
-    return typeof this.config.respondWith === "function"
+    return typeof this.config.respondWith === 'function'
       ? this.config.respondWith(prompt)
       : this.config.respondWith;
   }
@@ -133,10 +133,13 @@ export class MockAdapter implements ExpoAIAdapter {
       this.threwOnce = true;
       throw ExpoAIError.from(this.config.throwOnce, this.provider);
     }
-    return { text: this.replyFor(prompt), finishReason: "stop" };
+    return { text: this.replyFor(prompt), finishReason: 'stop' };
   }
 
-  private streamImpl(req: NormalizedGenerateRequest, handlers: AdapterStreamHandlers): StreamHandle {
+  private streamImpl(
+    req: NormalizedGenerateRequest,
+    handlers: AdapterStreamHandlers,
+  ): StreamHandle {
     let cancelled = false;
     const run = async (): Promise<void> => {
       const result = await this.produce(req.prompt);

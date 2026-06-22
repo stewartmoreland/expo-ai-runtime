@@ -6,12 +6,12 @@ Apple **Foundation Models** (on-device, iOS 26+) provider for the
 ## Install & use
 
 ```ts
-import { ExpoAI } from "@stewmore/expo-ai-core";
-import "@stewmore/expo-ai-apple-foundation-models"; // registers the iOS adapter (side-effect import)
+import { ExpoAI } from '@stewmore/expo-ai-core';
+import '@stewmore/expo-ai-apple-foundation-models'; // registers the iOS adapter (side-effect import)
 
 const caps = await ExpoAI.getCapabilities();
-if (caps.available && caps.provider === "apple-foundation-models") {
-  const result = await ExpoAI.generate({ prompt: "Write a haiku about Swift." });
+if (caps.available && caps.provider === 'apple-foundation-models') {
+  const result = await ExpoAI.generate({ prompt: 'Write a haiku about Swift.' });
   console.log(result.text); // privacy: on-device
 }
 ```
@@ -27,13 +27,13 @@ On unsupported OS/devices the adapter reports `available: false` with a reason
 
 ## What it maps
 
-| Runtime | Foundation Models |
-| --- | --- |
-| `generate` | `LanguageModelSession.respond(to:options:)` |
-| `stream` | `LanguageModelSession.streamResponse(...)` (cumulative snapshots → token deltas) |
-| `createSession` | native stateful `LanguageModelSession` (`generateInSession` / `resetSession` / `disposeSession`) |
-| capability detection | `SystemLanguageModel.availability` |
-| errors | `LanguageModelSession.GenerationError` → `ExpoAIError` |
+| Runtime              | Foundation Models                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `generate`           | `LanguageModelSession.respond(to:options:)`                                                      |
+| `stream`             | `LanguageModelSession.streamResponse(...)` (cumulative snapshots → token deltas)                 |
+| `createSession`      | native stateful `LanguageModelSession` (`generateInSession` / `resetSession` / `disposeSession`) |
+| capability detection | `SystemLanguageModel.availability`                                                               |
+| errors               | `LanguageModelSession.GenerationError` → `ExpoAIError`                                           |
 
 Structured output (`generateObject`), summarize/rewrite/proofread are provided
 by the core runtime over `generate`. Native **guided generation** via

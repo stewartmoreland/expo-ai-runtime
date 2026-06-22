@@ -9,11 +9,11 @@ state, and generation routed through the bundled **mock** reference server
 
 ## Apps under test (appId is identical on iOS and Android)
 
-| App | appId | Folder |
-|---|---|---|
-| basic-generate | `com.stewmore.expoai.basicgenerate` | `basic-generate/` |
-| streaming-chat | `com.stewmore.expoai.streamingchat` | `streaming-chat/` |
-| cloud-fallback | `com.stewmore.expoai.cloudfallback` | `cloud-fallback/` |
+| App               | appId                                  | Folder               |
+| ----------------- | -------------------------------------- | -------------------- |
+| basic-generate    | `com.stewmore.expoai.basicgenerate`    | `basic-generate/`    |
+| streaming-chat    | `com.stewmore.expoai.streamingchat`    | `streaming-chat/`    |
+| cloud-fallback    | `com.stewmore.expoai.cloudfallback`    | `cloud-fallback/`    |
 | structured-output | `com.stewmore.expoai.structuredoutput` | `structured-output/` |
 
 ## Tiers (Maestro tags)
@@ -25,7 +25,7 @@ state, and generation routed through the bundled **mock** reference server
   1. `npm run server` is running at the repo root (mock mode, no API keys).
      It serves http://localhost:8787 (iOS) / http://10.0.2.2:8787 (Android).
   2. The device has **no on-device model** available, so `ExpoAI.generate/
-     stream/generateObject` falls back to the cloud (mock). A clean CI
+stream/generateObject` falls back to the cloud (mock). A clean CI
      simulator/emulator satisfies this. On a device with an on-device model
      these flows would route on-device and the cloud-specific assertions
      (`badge-cloud`, `badge-third-party-cloud`) would not hold.

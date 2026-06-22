@@ -6,12 +6,12 @@ the [Expo AI Runtime](../../README.md).
 ## Install & use
 
 ```ts
-import { ExpoAI } from "@stewmore/expo-ai-core";
-import "@stewmore/expo-ai-android-aicore"; // registers the Android adapter (side-effect import)
+import { ExpoAI } from '@stewmore/expo-ai-core';
+import '@stewmore/expo-ai-android-aicore'; // registers the Android adapter (side-effect import)
 
 const caps = await ExpoAI.getCapabilities();
-if (caps.available && caps.provider === "android-aicore-gemini-nano") {
-  const result = await ExpoAI.generate({ prompt: "Write a haiku about Kotlin." });
+if (caps.available && caps.provider === 'android-aicore-gemini-nano') {
+  const result = await ExpoAI.generate({ prompt: 'Write a haiku about Kotlin.' });
   console.log(result.text); // privacy: on-device
 }
 ```
@@ -20,7 +20,7 @@ If the model isn't downloaded yet, the availability reason is
 `model_not_downloaded`; trigger a download:
 
 ```ts
-import { downloadGeminiNanoModel } from "@stewmore/expo-ai-android-aicore";
+import { downloadGeminiNanoModel } from '@stewmore/expo-ai-android-aicore';
 await downloadGeminiNanoModel();
 ```
 
@@ -35,14 +35,14 @@ back per the app's policy.
 
 ## What it maps
 
-| Runtime | ML Kit GenAI |
-| --- | --- |
-| `generate` | Prompt API `GenerativeModel.generateContent` |
-| `stream` | `generateContentStream` (`Flow`) → token deltas |
-| capability detection | `checkStatus()` → `FeatureStatus` |
-| model download | `download()` (`downloadGeminiNanoModel`) |
-| sessions | emulated (transcript replayed as prompt prefix — the Prompt API is stateless) |
-| errors | `GenAiException.errorCode` → `ExpoAIError` |
+| Runtime              | ML Kit GenAI                                                                  |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `generate`           | Prompt API `GenerativeModel.generateContent`                                  |
+| `stream`             | `generateContentStream` (`Flow`) → token deltas                               |
+| capability detection | `checkStatus()` → `FeatureStatus`                                             |
+| model download       | `download()` (`downloadGeminiNanoModel`)                                      |
+| sessions             | emulated (transcript replayed as prompt prefix — the Prompt API is stateless) |
+| errors               | `GenAiException.errorCode` → `ExpoAIError`                                    |
 
 Structured output and summarize/rewrite/proofread are provided by the core
 runtime over `generate` (JSON prompt + validate + repair).

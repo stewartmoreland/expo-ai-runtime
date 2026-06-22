@@ -1,6 +1,6 @@
 name: 🐞 Bug report
 description: Report a defect in the Expo AI Runtime
-labels: ["bug"]
+labels: ['bug']
 body:
   - type: markdown
     attributes:
@@ -13,7 +13,7 @@ body:
     attributes:
       label: Summary
       description: A clear, concise description of the bug.
-      placeholder: "`ExpoAI.generate()` rejects with UNAVAILABLE even though capabilities report the provider as available."
+      placeholder: '`ExpoAI.generate()` rejects with UNAVAILABLE even though capabilities report the provider as available.'
     validations:
       required: true
 
@@ -43,11 +43,11 @@ body:
       description: Which workspace package is affected?
       multiple: true
       options:
-        - "@stewmore/expo-ai-core"
+        - '@stewmore/expo-ai-core'
         - expo-ai-apple-foundation-models
         - expo-ai-android-aicore
-        - "@stewmore/expo-ai-cloud"
-        - "@stewmore/expo-ai-evals"
+        - '@stewmore/expo-ai-cloud'
+        - '@stewmore/expo-ai-evals'
         - examples
         - docs
         - not sure

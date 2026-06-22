@@ -17,17 +17,17 @@ npm install @stewmore/expo-ai-cloud
 ## Configure the endpoint
 
 ```ts
-import { configureCloud } from "@stewmore/expo-ai-cloud";
-import { fetch as expoFetch } from "expo/fetch";
+import { configureCloud } from '@stewmore/expo-ai-cloud';
+import { fetch as expoFetch } from 'expo/fetch';
 
-configureCloud({ endpoint: "http://localhost:8787", fetch: expoFetch });
+configureCloud({ endpoint: 'http://localhost:8787', fetch: expoFetch });
 ```
 
 ```ts
 export type CloudProviderConfig = {
   endpoint: string;
   headers?: Record<string, string>;
-  provider?: "openai" | "gemini" | "anthropic" | "bedrock" | "custom";
+  provider?: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'custom';
 };
 ```
 
@@ -35,8 +35,8 @@ export type CloudProviderConfig = {
 
 ```ts
 await ExpoAI.generate({
-  prompt: "Extract the risks from this proposal.",
-  fallback: "cloud",
+  prompt: 'Extract the risks from this proposal.',
+  fallback: 'cloud',
 });
 ```
 

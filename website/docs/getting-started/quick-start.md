@@ -11,15 +11,15 @@ Foundation Models, Android Gemini Nano, and your cloud backend — routing and f
 are handled for you.
 
 ```ts
-import { ExpoAI } from "@stewmore/expo-ai-core";
-import "@stewmore/expo-ai-apple-foundation-models"; // registers the iOS adapter
-import "@stewmore/expo-ai-android-aicore";          // registers the Android adapter
+import { ExpoAI } from '@stewmore/expo-ai-core';
+import '@stewmore/expo-ai-apple-foundation-models'; // registers the iOS adapter
+import '@stewmore/expo-ai-android-aicore'; // registers the Android adapter
 
 const caps = await ExpoAI.getCapabilities();
 if (caps.available) {
   const result = await ExpoAI.generate({
-    prompt: "Summarize this note in five bullets.",
-    fallback: "cloud",
+    prompt: 'Summarize this note in five bullets.',
+    fallback: 'cloud',
   });
   console.log(result.text, result.provider, result.privacy.privacyMode);
 }

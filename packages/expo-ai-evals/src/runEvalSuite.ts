@@ -13,12 +13,12 @@ import {
   getAdapters,
   registerAdapter,
   routeGenerateObjectWithMeta,
-} from "@stewmore/expo-ai-core";
-import { createMockAdapter } from "@stewmore/expo-ai-core/testing";
-import type { RewriteStyle } from "@stewmore/expo-ai-core";
+} from '@stewmore/expo-ai-core';
+import { createMockAdapter } from '@stewmore/expo-ai-core/testing';
+import type { RewriteStyle } from '@stewmore/expo-ai-core';
 
-import { scoreSchemaValidity } from "./scoreSchemaValidity.js";
-import type { EvalCase, EvalResult, EvalSuiteResult } from "./types.js";
+import { scoreSchemaValidity } from './scoreSchemaValidity.js';
+import type { EvalCase, EvalResult, EvalSuiteResult } from './types.js';
 
 function elapsed(start: number): number {
   return Math.round((performance.now() - start) * 100) / 100;
@@ -34,12 +34,13 @@ export async function runEvalCase(testCase: EvalCase): Promise<EvalResult> {
   const start = performance.now();
   try {
     switch (testCase.kind) {
-      case "object": {
-        if (!testCase.schema) throw new Error(`case "${testCase.name}" is kind=object but has no schema`);
+      case 'object': {
+        if (!testCase.schema)
+          throw new Error(`case "${testCase.name}" is kind=object but has no schema`);
         const meta = await routeGenerateObjectWithMeta({
-          prompt: testCase.prompt ?? "",
+          prompt: testCase.prompt ?? '',
           schema: testCase.schema,
-          fallback: testCase.fallback ?? "cloud",
+          fallback: testCase.fallback ?? 'cloud',
           ...(testCase.provider ? { provider: testCase.provider } : {}),
         });
         const schemaValid = scoreSchemaValidity(meta.object, testCase.schema);
@@ -53,43 +54,43 @@ export async function runEvalCase(testCase: EvalCase): Promise<EvalResult> {
         };
       }
 
-      case "summarize": {
+      case 'summarize': {
         const result = await ExpoAI.summarize({
-          text: testCase.text ?? "",
-          fallback: testCase.fallback ?? "cloud",
+          text: testCase.text ?? '',
+          fallback: testCase.fallback ?? 'cloud',
           ...(testCase.provider ? { provider: testCase.provider } : {}),
           ...(testCase.length ? { length: testCase.length } : {}),
         });
         return functionalResult(testCase, result.provider, result.text, result.usedFallback, start);
       }
 
-      case "rewrite": {
+      case 'rewrite': {
         const result = await ExpoAI.rewrite({
-          text: testCase.text ?? "",
-          fallback: testCase.fallback ?? "cloud",
+          text: testCase.text ?? '',
+          fallback: testCase.fallback ?? 'cloud',
           ...(testCase.provider ? { provider: testCase.provider } : {}),
           ...(testCase.style ? { style: testCase.style as RewriteStyle } : {}),
         });
         return functionalResult(testCase, result.provider, result.text, result.usedFallback, start);
       }
 
-      case "proofread": {
+      case 'proofread': {
         const result = await ExpoAI.proofread({
-          text: testCase.text ?? "",
-          fallback: testCase.fallback ?? "cloud",
+          text: testCase.text ?? '',
+          fallback: testCase.fallback ?? 'cloud',
           ...(testCase.provider ? { provider: testCase.provider } : {}),
         });
         return functionalResult(testCase, result.provider, result.text, result.usedFallback, start);
       }
 
-      case "privacy":
+      case 'privacy':
         return await runPrivacyCase(testCase, start);
 
-      case "generate":
+      case 'generate':
       default: {
         const result = await ExpoAI.generate({
-          prompt: testCase.prompt ?? "",
-          fallback: testCase.fallback ?? "cloud",
+          prompt: testCase.prompt ?? '',
+          fallback: testCase.fallback ?? 'cloud',
           ...(testCase.provider ? { provider: testCase.provider } : {}),
           ...(testCase.sensitive ? { sensitive: true } : {}),
         });
@@ -97,9 +98,9 @@ export async function runEvalCase(testCase: EvalCase): Promise<EvalResult> {
       }
     }
   } catch (error) {
-    const err = ExpoAIError.from(error, testCase.provider ?? "none");
+    const err = ExpoAIError.from(error, testCase.provider ?? 'none');
     return {
-      provider: testCase.provider ?? "none",
+      provider: testCase.provider ?? 'none',
       testName: testCase.name,
       passed: false,
       latencyMs: elapsed(start),
@@ -112,7 +113,7 @@ export async function runEvalCase(testCase: EvalCase): Promise<EvalResult> {
 
 function functionalResult(
   testCase: EvalCase,
-  provider: EvalResult["provider"],
+  provider: EvalResult['provider'],
   text: string,
   usedFallback: boolean,
   start: number,
@@ -133,32 +134,32 @@ function functionalResult(
 async function runPrivacyCase(testCase: EvalCase, start: number): Promise<EvalResult> {
   const saved = getAdapters();
   clearAdapters();
-  registerAdapter(createMockAdapter({ provider: "cloud", respondWith: "LEAKED" }));
+  registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'LEAKED' }));
   try {
     await ExpoAI.generate({
-      prompt: testCase.prompt ?? "secret",
+      prompt: testCase.prompt ?? 'secret',
       sensitive: true,
-      fallback: testCase.fallback ?? "any",
+      fallback: testCase.fallback ?? 'any',
     });
     return {
-      provider: "cloud",
+      provider: 'cloud',
       testName: testCase.name,
       passed: false,
       latencyMs: elapsed(start),
       usedFallback: false,
-      detail: "sensitive prompt was NOT blocked (leaked to cloud)",
+      detail: 'sensitive prompt was NOT blocked (leaked to cloud)',
     };
   } catch (error) {
-    const err = ExpoAIError.from(error, "none");
-    const passed = err.code === "UNAVAILABLE";
+    const err = ExpoAIError.from(error, 'none');
+    const passed = err.code === 'UNAVAILABLE';
     return {
-      provider: "none",
+      provider: 'none',
       testName: testCase.name,
       passed,
       latencyMs: elapsed(start),
       usedFallback: false,
       errorCode: err.code,
-      detail: passed ? "sensitive prompt correctly blocked" : err.message,
+      detail: passed ? 'sensitive prompt correctly blocked' : err.message,
     };
   } finally {
     clearAdapters();

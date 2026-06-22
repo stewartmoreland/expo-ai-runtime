@@ -11,34 +11,34 @@ available one and, when allowed, falls back through the rest.
 
 ```ts
 export type ExpoAIProvider =
-  | "system-preferred"
-  | "apple-foundation-models"
-  | "apple-private-cloud-compute"
-  | "android-aicore-gemini-nano"
-  | "litert-lm"
-  | "cloud"
-  | "none";
+  | 'system-preferred'
+  | 'apple-foundation-models'
+  | 'apple-private-cloud-compute'
+  | 'android-aicore-gemini-nano'
+  | 'litert-lm'
+  | 'cloud'
+  | 'none';
 ```
 
 ## Default priority
 
 ```ts
 export const defaultProviderPriority: ExpoAIProvider[] = [
-  "apple-foundation-models",
-  "apple-private-cloud-compute",
-  "android-aicore-gemini-nano",
-  "litert-lm",
-  "cloud",
+  'apple-foundation-models',
+  'apple-private-cloud-compute',
+  'android-aicore-gemini-nano',
+  'litert-lm',
+  'cloud',
 ];
 ```
 
-| Category | Provider | Purpose |
-| --- | --- | --- |
-| System model | Apple Foundation Models | Preferred iOS native model path |
-| System model | Android AICore / Gemini Nano | Preferred Android native model path |
-| Private cloud | Apple Private Cloud Compute | Apple-managed larger model path |
-| Local BYOM | LiteRT-LM | Downloaded or bundled local models |
-| Cloud | Private backend | Reliable fallback and advanced reasoning |
+| Category      | Provider                     | Purpose                                  |
+| ------------- | ---------------------------- | ---------------------------------------- |
+| System model  | Apple Foundation Models      | Preferred iOS native model path          |
+| System model  | Android AICore / Gemini Nano | Preferred Android native model path      |
+| Private cloud | Apple Private Cloud Compute  | Apple-managed larger model path          |
+| Local BYOM    | LiteRT-LM                    | Downloaded or bundled local models       |
+| Cloud         | Private backend              | Reliable fallback and advanced reasoning |
 
 ## Routing rules
 
@@ -50,8 +50,8 @@ export const defaultProviderPriority: ExpoAIProvider[] = [
 
 ```ts
 await ExpoAI.generate({
-  prompt: "Extract the risks from this proposal.",
-  fallback: "cloud", // "none" | "cloud" | "any"
+  prompt: 'Extract the risks from this proposal.',
+  fallback: 'cloud', // "none" | "cloud" | "any"
 });
 ```
 

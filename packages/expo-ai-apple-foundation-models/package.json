@@ -24,8 +24,18 @@
     "expo-module.config.json",
     "ExpoAIApple.podspec"
   ],
-  "sideEffects": ["./build/index.js", "./src/index.ts"],
-  "keywords": ["expo", "react-native", "ai", "apple", "foundation-models", "on-device"],
+  "sideEffects": [
+    "./build/index.js",
+    "./src/index.ts"
+  ],
+  "keywords": [
+    "expo",
+    "react-native",
+    "ai",
+    "apple",
+    "foundation-models",
+    "on-device"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepack": "npm run build",

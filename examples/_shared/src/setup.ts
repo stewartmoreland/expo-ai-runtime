@@ -4,12 +4,12 @@
  * Importing this module registers the on-device providers (side-effect imports)
  * and configures the cloud fallback to point at the local reference server.
  */
-import { configureCloud } from "@stewmore/expo-ai-cloud";
-import { fetch as expoFetch } from "expo/fetch";
-import { Platform } from "react-native";
+import { configureCloud } from '@stewmore/expo-ai-cloud';
+import { fetch as expoFetch } from 'expo/fetch';
+import { Platform } from 'react-native';
 
-import "@stewmore/expo-ai-apple-foundation-models";
-import "@stewmore/expo-ai-android-aicore";
+import '@stewmore/expo-ai-apple-foundation-models';
+import '@stewmore/expo-ai-android-aicore';
 
 /**
  * The reference server. On the Android emulator `localhost` is the emulator
@@ -17,7 +17,7 @@ import "@stewmore/expo-ai-android-aicore";
  * with your machine's LAN IP.
  */
 export const CLOUD_ENDPOINT =
-  Platform.OS === "android" ? "http://10.0.2.2:8787" : "http://localhost:8787";
+  Platform.OS === 'android' ? 'http://10.0.2.2:8787' : 'http://localhost:8787';
 
 let configuredEndpoint: string | null = null;
 

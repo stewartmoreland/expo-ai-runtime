@@ -8,20 +8,20 @@ tags:
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "title-basic-generate"
+    id: 'title-basic-generate'
 - tapOn:
-    id: "button-generate"
+    id: 'button-generate'
 # Generation latency: wait up to 30s for the Result card rather than relying on
 # the default ~7s assertVisible retry.
 - extendedWaitUntil:
     visible:
-      id: "card-result"
+      id: 'card-result'
     timeout: 30000
 # Cloud success => provider badge "cloud" + privacy "third-party-cloud".
 - assertVisible:
-    id: "badge-cloud"
+    id: 'badge-cloud'
 - assertVisible:
-    id: "badge-third-party-cloud"
+    id: 'badge-third-party-cloud'
 # The reply renders at the bottom of the Result card, below the fold in the
 # screen's ScrollView, so scroll it into view. The pattern is wrapped in .* —
 # this Maestro/iOS build matches text against accessibilityText as a FULL-string
@@ -31,7 +31,7 @@ tags:
 # in the first line. scrollUntilVisible also asserts visibility once found.
 - scrollUntilVisible:
     element:
-      text: ".*mock response from the Expo AI Runtime reference server.*"
+      text: '.*mock response from the Expo AI Runtime reference server.*'
     direction: DOWN
     timeout: 30000
     visibilityPercentage: 30

@@ -7,32 +7,32 @@ tags:
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "title-cloud-fallback"
+    id: 'title-cloud-fallback'
 - assertVisible:
-    id: "switch-sensitive"
+    id: 'switch-sensitive'
     checked: true
 # Explicitly opt in to cloud for a sensitive prompt.
 - tapOn:
-    id: "chip-cloud"
+    id: 'chip-cloud'
 - tapOn:
-    id: "button-generate"
+    id: 'button-generate'
 - extendedWaitUntil:
     visible:
-      id: "card-result"
+      id: 'card-result'
     timeout: 30000
 - assertVisible:
-    id: "badge-cloud"
+    id: 'badge-cloud'
 - assertVisible:
-    id: "badge-third-party-cloud"
+    id: 'badge-third-party-cloud'
 # usedFallback badge (label "used fallback" -> id badge-used-fallback).
 - assertVisible:
-    id: "badge-used-fallback"
+    id: 'badge-used-fallback'
 # The reply renders below the fold; scroll it into view. Pattern wrapped in .*
 # because this Maestro/iOS build matches text (accessibilityText) as a
 # FULL-string regex, not a substring.
 - scrollUntilVisible:
     element:
-      text: ".*mock response from the Expo AI Runtime reference server.*"
+      text: '.*mock response from the Expo AI Runtime reference server.*'
     direction: DOWN
     timeout: 30000
     visibilityPercentage: 30

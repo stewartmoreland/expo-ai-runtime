@@ -14,21 +14,17 @@ export type ExpoAIPrivacyInfo = {
   provider: ExpoAIProvider;
   isOnDevice: boolean;
   sendsPromptOffDevice: boolean;
-  privacyMode:
-    | "on-device"
-    | "apple-private-cloud-compute"
-    | "third-party-cloud"
-    | "unknown";
+  privacyMode: 'on-device' | 'apple-private-cloud-compute' | 'third-party-cloud' | 'unknown';
 };
 ```
 
 ## Recommended UI copy
 
-| Mode | Copy |
-| --- | --- |
-| On-device | Processed privately on this device. |
-| Apple Private Cloud Compute | Processed using Apple Private Cloud Compute. |
-| Third-party cloud | Processed using a configured cloud AI provider. |
+| Mode                        | Copy                                            |
+| --------------------------- | ----------------------------------------------- |
+| On-device                   | Processed privately on this device.             |
+| Apple Private Cloud Compute | Processed using Apple Private Cloud Compute.    |
+| Third-party cloud           | Processed using a configured cloud AI provider. |
 
 :::warning[Sensitive prompts]
 Do not silently fall back to a third-party cloud for sensitive workflows unless the app

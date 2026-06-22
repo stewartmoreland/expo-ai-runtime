@@ -112,7 +112,7 @@ jobs:
         run: npx release-it --ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: "true"
+          NPM_CONFIG_PROVENANCE: 'true'
       - name: Push release commit to main
         if: steps.decide.outputs.release == 'true'
         run: git push origin main --follow-tags

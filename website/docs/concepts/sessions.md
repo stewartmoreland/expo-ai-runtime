@@ -13,7 +13,7 @@ state — natively where the provider supports it, emulated where it doesn't.
 export type CreateSessionOptions = {
   instructions?: string;
   provider?: ExpoAIProvider;
-  fallback?: "none" | "cloud" | "any";
+  fallback?: 'none' | 'cloud' | 'any';
   temperature?: number;
   maxOutputTokens?: number;
   metadata?: Record<string, string>;
@@ -34,18 +34,18 @@ export type ExpoAISession = {
 
 ```ts
 const session = await ExpoAI.createSession({
-  instructions: "You are a concise note-taking assistant.",
+  instructions: 'You are a concise note-taking assistant.',
 });
-await session.generate({ prompt: "Capture the action items from this meeting." });
+await session.generate({ prompt: 'Capture the action items from this meeting.' });
 await session.dispose();
 ```
 
 ## Native mapping
 
-| Concept | iOS | Android | Cloud |
-| --- | --- | --- | --- |
-| Session | Native Foundation Models session | Native or emulated session | Conversation / thread |
-| Instructions | Native instructions | Prompt prefix | System message |
-| Streaming | Native if available | Native or emulated | Provider stream |
-| Structured output | Native if available | JSON prompt + validation | JSON mode / tools |
-| Tools | Native if available | Emulated | Provider tools |
+| Concept           | iOS                              | Android                    | Cloud                 |
+| ----------------- | -------------------------------- | -------------------------- | --------------------- |
+| Session           | Native Foundation Models session | Native or emulated session | Conversation / thread |
+| Instructions      | Native instructions              | Prompt prefix              | System message        |
+| Streaming         | Native if available              | Native or emulated         | Provider stream       |
+| Structured output | Native if available              | JSON prompt + validation   | JSON mode / tools     |
+| Tools             | Native if available              | Emulated                   | Provider tools        |
