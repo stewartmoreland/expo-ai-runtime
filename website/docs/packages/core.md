@@ -41,7 +41,7 @@ The native adapters are registered against the core registry by importing their 
 ## Related concepts
 
 - [Providers & routing](../concepts/providers.md)
-- [Capability detection](../concepts/capabilities.md)
+- [Capability detection](../concepts/capabilities.mdx)
 - [Sessions](../concepts/sessions.md)
 - [Structured output](../concepts/structured-output.md)
 - [Privacy model](../concepts/privacy.md)
