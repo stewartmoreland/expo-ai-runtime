@@ -127,7 +127,8 @@ jobs:
           chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
           curl -sSLO "https://github.com/detekt/detekt/releases/download/v${DETEKT_VERSION}/detekt-cli-${DETEKT_VERSION}.zip"
           unzip -q "detekt-cli-${DETEKT_VERSION}.zip"
-          echo "DETEKT=$PWD/detekt-cli-${DETEKT_VERSION}/bin/detekt" >> "$GITHUB_ENV"
+          # the executable inside the release zip is `detekt-cli`, not `detekt`
+          echo "DETEKT=$PWD/detekt-cli-${DETEKT_VERSION}/bin/detekt-cli" >> "$GITHUB_ENV"
       - name: ktlint
         working-directory: packages/expo-ai-android-aicore
         run: ktlint "android/src/main/java/**/*.kt"
