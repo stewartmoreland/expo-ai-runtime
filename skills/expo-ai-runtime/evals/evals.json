@@ -1,0 +1,46 @@
+{
+  "skill_name": "expo-ai-runtime",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm building a notes app in Expo (SDK 54, expo-router) and I want a \"Summarize\" button on each note. Use the @stewmore/expo-ai-runtime packages (the ExpoAI API) to summarize on-device when the phone supports it and fall back to our cloud backend at https://ai.mynotes.app otherwise. Show the user a small badge under the summary saying whether it was processed on-device or in the cloud. Write the App entry wiring plus a Summarize screen component (TypeScript/TSX). The notes can be personal so be careful about privacy.",
+      "expected_output": "App-entry wiring that imports both provider packages unconditionally and calls configureCloud with the endpoint + expo/fetch. A component that detects capabilities, calls ExpoAI.generate (or useGenerate) with fallback:'cloud', reads result.provider/result.privacy to render an on-device-vs-cloud badge (ideally via privacyCopyForProvider), and handles the unavailable case. Should not invent non-existent ExpoAI methods or options.",
+      "files": [],
+      "assertions": [
+        "Imports both provider packages (@stewmore/expo-ai-apple-foundation-models and @stewmore/expo-ai-android-aicore) unconditionally to self-register adapters (not guarded behind Platform.OS)",
+        "Calls configureCloud with the endpoint https://ai.mynotes.app and passes a fetch implementation from expo/fetch",
+        "Generates via ExpoAI.generate or useGenerate with fallback set to 'cloud' (or 'any')",
+        "Renders an on-device-vs-cloud badge derived from the result's provider/privacy metadata (result.privacy.privacyMode, sendsPromptOffDevice, or privacyCopyForProvider)",
+        "Handles the no-provider-available case by checking capabilities/availability (getCapabilities or useCapabilities)",
+        "Uses only real ExpoAI/runtime API surface — no invented methods or options"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Using @stewmore/expo-ai-core in my React Native app, I need to extract structured fields from a pasted receipt: merchant name, total amount (number), date, and a list of line items. I want a typed result back, not a string, and it should be robust if the model returns slightly malformed JSON. Receipts may contain personal financial info. Write a TypeScript function that does the extraction and the JSON schema it uses.",
+      "expected_output": "A JSONSchema (type:'object', properties with descriptions, required array) and a call to ExpoAI.generateObject<T>({ prompt, schema, ... }) returning the typed object. Should rely on the built-in validate/repair (maxRepairAttempts) rather than hand-rolling JSON parsing/retries, and should consider sensitivity given financial data. No hallucinated APIs.",
+      "files": [],
+      "assertions": [
+        "Defines a JSONSchema object (type:'object') with properties for merchant, total (number), date, and items (array) plus a required array",
+        "Calls ExpoAI.generateObject with the schema and a generic type parameter, returning a typed object rather than a string",
+        "Relies on the runtime's built-in validation/repair (e.g. default or explicit maxRepairAttempts) instead of hand-rolling JSON.parse plus a manual retry loop",
+        "Addresses the financial-data sensitivity (sets sensitive:true or otherwise reasons about not leaking the prompt to third-party cloud)",
+        "Uses only real ExpoAI/runtime API surface — no invented methods or options"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Add a streaming chat screen to my Expo app using the @stewmore/expo-ai-react hooks. Tokens should appear live as they arrive, the user must be able to cancel an in-flight reply, and I want to surface any errors. Multi-turn context should be preserved across messages. Give me the full screen component in TSX.",
+      "expected_output": "A component using useChat (which manages an ExpoAISession for multi-turn context), rendering messages, wiring input/setInput/append, exposing stop() to cancel, and showing error.code/message. Cancellation should not be treated as an error. Should not reimplement session/abort plumbing that the hook already provides or invent hook APIs.",
+      "files": [],
+      "assertions": [
+        "Uses the useChat hook from @stewmore/expo-ai-react",
+        "Renders the messages array and wires input/setInput/append for sending turns",
+        "Exposes a cancel control wired to the hook's stop() for the in-flight reply",
+        "Surfaces errors via the hook's error (code/message) and does not treat cancellation as an error",
+        "Relies on the hook for session lifecycle, multi-turn context, and abort plumbing rather than reimplementing AbortController/session management by hand",
+        "Uses only real hook/runtime API surface — no invented hook methods or options"
+      ]
+    }
+  ]
+}
