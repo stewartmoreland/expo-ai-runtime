@@ -204,6 +204,35 @@ export type GenerateChunk =
   | { type: 'delta'; text: string }
   | { type: 'done'; result: GenerateResult };
 
+/** Recursively-optional view of a type — the shape of a partial streamed object. */
+export type DeepPartial<T> =
+  T extends (infer U)[]
+    ? DeepPartial<U>[]
+    : T extends object
+      ? { [K in keyof T]?: DeepPartial<T[K]> }
+      : T;
+
+/** Options for {@link ExpoAI.streamObject} (same shape as generateObject). */
+export type StreamObjectOptions = GenerateObjectOptions;
+
+/**
+ * Handle returned by {@link ExpoAI.streamObject}. Consume `partialObjectStream`
+ * for progressively-complete snapshots as tokens arrive, and/or await `object`
+ * for the validated (repaired) final value. All four views are backed by one
+ * underlying generation; on failure the streams throw and the promises reject
+ * with the same {@link ExpoAIError}.
+ */
+export interface StreamObjectResult<T = unknown> {
+  /** Best-effort partial snapshots as tokens arrive. The last equals `object`. */
+  readonly partialObjectStream: AsyncIterable<DeepPartial<T>>;
+  /** Raw text deltas, for callers that also want the token stream. */
+  readonly textStream: AsyncIterable<string>;
+  /** The validated final object (after repair). Rejects with an ExpoAIError. */
+  readonly object: Promise<T>;
+  /** Full result metadata (provider, privacy, usedFallback). */
+  readonly result: Promise<GenerateResult>;
+}
+
 /* ------------------------------------------------------------------ */
 /* Sessions (docs/prd.md §8)                                          */
 /* ------------------------------------------------------------------ */

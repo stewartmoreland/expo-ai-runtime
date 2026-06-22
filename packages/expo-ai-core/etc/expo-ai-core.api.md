@@ -97,6 +97,11 @@ export type CreateSessionOptions = {
 export function createUnavailableNativeAdapter(provider: ExpoAIProvider, reason: ExpoAIUnavailableReason): ExpoAIAdapter;
 
 // @public
+export type DeepPartial<T> = T extends (infer U)[] ? DeepPartial<U>[] : T extends object ? {
+    [K in keyof T]?: DeepPartial<T[K]>;
+} : T;
+
+// @public
 export const defaultProviderPriority: ExpoAIProvider[];
 
 // @public (undocumented)
@@ -108,6 +113,7 @@ export const ExpoAI: {
     readonly stream: (options: GenerateOptions) => AsyncIterable<GenerateChunk>;
     readonly createSession: (options?: CreateSessionOptions) => Promise<ExpoAISession>;
     readonly generateObject: <T = unknown>(options: GenerateObjectOptions) => Promise<T>;
+    readonly streamObject: <T = unknown>(options: StreamObjectOptions) => StreamObjectResult<T>;
     readonly summarize: (options: SummarizeOptions) => Promise<GenerateResult>;
     readonly rewrite: (options: RewriteOptions) => Promise<GenerateResult>;
     readonly proofread: (options: ProofreadOptions) => Promise<GenerateResult>;
@@ -331,6 +337,7 @@ export type GenerateValidatedObjectOptions = {
     maxRepairAttempts?: number;
     generateText: (prompt: string) => Promise<string>;
     nativeObject?: () => Promise<string>;
+    seedText?: string;
 };
 
 // @public (undocumented)
@@ -492,6 +499,9 @@ export function normalizeRequest(options: GenerateOptions): NormalizedGenerateRe
 export function parseJson(text: string): ParseResult;
 
 // @public
+export function parsePartialJson(text: string): unknown | null;
+
+// @public
 export const PRIVACY_COPY: Record<ExpoAIPrivacyMode, string>;
 
 // @public
@@ -546,6 +556,9 @@ export function routeGenerateObjectWithMeta(options: GenerateObjectOptions): Pro
 // @public (undocumented)
 export function routeStream(options: GenerateOptions): AsyncIterable<GenerateChunk>;
 
+// @public
+export function routeStreamObject<T = unknown>(options: StreamObjectOptions): StreamObjectResult<T>;
+
 // Warning: (ae-forgotten-export) The symbol "TaskKind" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
@@ -589,6 +602,17 @@ export type SessionGenerateOptions = {
 export type StreamHandle = {
     cancel: () => void;
 };
+
+// @public
+export type StreamObjectOptions = GenerateObjectOptions;
+
+// @public
+export interface StreamObjectResult<T = unknown> {
+    readonly object: Promise<T>;
+    readonly partialObjectStream: AsyncIterable<DeepPartial<T>>;
+    readonly result: Promise<GenerateResult>;
+    readonly textStream: AsyncIterable<string>;
+}
 
 // @public (undocumented)
 export type SummarizeOptions = {

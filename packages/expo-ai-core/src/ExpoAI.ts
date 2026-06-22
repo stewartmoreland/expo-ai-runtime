@@ -7,7 +7,13 @@
  */
 
 import { getAvailability, getCapabilities, listProviders } from './capability-registry.js';
-import { routeGenerate, routeGenerateObject, routeStream, routeTask } from './provider-router.js';
+import {
+  routeGenerate,
+  routeGenerateObject,
+  routeStream,
+  routeStreamObject,
+  routeTask,
+} from './provider-router.js';
 import { clearAdapters, registerAdapter, unregisterAdapter } from './registry.js';
 import { createSession } from './session-manager.js';
 import type {
@@ -18,6 +24,8 @@ import type {
   GenerateResult,
   ProofreadOptions,
   RewriteOptions,
+  StreamObjectOptions,
+  StreamObjectResult,
   SummarizeOptions,
 } from './types.js';
 
@@ -47,6 +55,14 @@ export const ExpoAI = {
   /** Generate an object validated against a JSON schema (with repair). */
   generateObject<T = unknown>(options: GenerateObjectOptions): Promise<T> {
     return routeGenerateObject<T>(options);
+  },
+
+  /**
+   * Stream a structured object: partial snapshots as tokens arrive, plus a
+   * promise for the validated final object. See {@link StreamObjectResult}.
+   */
+  streamObject<T = unknown>(options: StreamObjectOptions): StreamObjectResult<T> {
+    return routeStreamObject<T>(options);
   },
 
   /** Summarize text (native task API when available, prompt-emulated otherwise). */

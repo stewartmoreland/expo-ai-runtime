@@ -258,6 +258,69 @@ export function parseJson(text: string): ParseResult {
   }
 }
 
+/**
+ * Close the open structures of a (possibly truncated) JSON prefix: terminate an
+ * open string, then append the matching closers for every unclosed `{`/`[`.
+ * String-aware (handles escapes). Returns null if the prefix is structurally
+ * impossible (a stray `}`/`]` with nothing open). Does not strip trailing
+ * commas/colons — {@link parsePartialJson} trims those by backing off.
+ */
+function closeOpenStructures(s: string): string | null {
+  const closers: string[] = [];
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < s.length; i++) {
+    const char = s[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === '{') closers.push('}');
+    else if (char === '[') closers.push(']');
+    else if (char === '}' || char === ']') {
+      if (closers.length === 0) return null; // unbalanced close
+      closers.pop();
+    }
+  }
+
+  let core = s;
+  let suffix = '';
+  if (inString) {
+    // A lone trailing backslash is an incomplete escape — drop it before closing.
+    if (escaped) core = core.slice(0, -1);
+    suffix += '"';
+  }
+  for (let i = closers.length - 1; i >= 0; i--) suffix += closers[i];
+  return core + suffix;
+}
+
+/**
+ * Best-effort parse of possibly-incomplete JSON (a streaming snapshot). Finds the
+ * first `{`/`[`, then closes the open structures; if that does not parse (a
+ * dangling key, trailing comma, half-typed number, or a code fence), it trims one
+ * character at a time and retries until something parses. Returns null when no
+ * prefix yields valid JSON. Never throws.
+ *
+ * Intentionally lenient: a snapshot may briefly omit the field currently being
+ * streamed — that is the correct behavior for partial-object streaming UIs.
+ */
+export function parsePartialJson(text: string): unknown | null {
+  const start = text.search(/[{[]/);
+  if (start === -1) return null;
+  const body = text.slice(start);
+
+  for (let end = body.length; end > 0; end--) {
+    const closed = closeOpenStructures(body.slice(0, end));
+    if (closed === null) continue;
+    const parsed = parseJson(closed);
+    if (parsed.ok) return parsed.value;
+  }
+  return null;
+}
+
 /* ------------------------------------------------------------------ */
 /* Prompt construction                                                */
 /* ------------------------------------------------------------------ */
@@ -314,6 +377,12 @@ export type GenerateValidatedObjectOptions = {
   generateText: (prompt: string) => Promise<string>;
   /** Optional native guided generation that returns JSON text for the schema. */
   nativeObject?: () => Promise<string>;
+  /**
+   * Pre-generated text to validate as attempt 0 (e.g. already-streamed output),
+   * bypassing the initial `nativeObject`/`generateText` call. Repair attempts,
+   * if needed, still go through `generateText`. Ignored when empty/whitespace.
+   */
+  seedText?: string;
 };
 
 export type ValidatedObjectResult = {
@@ -327,6 +396,7 @@ export async function generateValidatedObject(
   options: GenerateValidatedObjectOptions,
 ): Promise<ValidatedObjectResult> {
   const maxRepair = options.maxRepairAttempts ?? 2;
+  const seed = options.seedText?.trim() ? options.seedText : undefined;
   let lastErrors: string[] = [];
   let lastText = '';
   let attempts = 0;
@@ -334,7 +404,9 @@ export async function generateValidatedObject(
   for (let attempt = 0; attempt <= maxRepair; attempt++) {
     attempts++;
     let text: string;
-    if (attempt === 0 && options.nativeObject) {
+    if (attempt === 0 && seed !== undefined) {
+      text = seed;
+    } else if (attempt === 0 && options.nativeObject) {
       text = await options.nativeObject();
     } else if (attempt === 0) {
       text = await options.generateText(
