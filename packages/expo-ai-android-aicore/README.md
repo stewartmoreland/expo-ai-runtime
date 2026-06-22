@@ -24,6 +24,30 @@ import { downloadGeminiNanoModel } from '@stewmore/expo-ai-android-aicore';
 await downloadGeminiNanoModel();
 ```
 
+## Config plugin
+
+The native module autolinks on its own, but add the config plugin so
+`expo prebuild` also raises the project's `minSdkVersion` to the AICore floor
+(26) — no manual `expo-build-properties` editing:
+
+```json
+{
+  "expo": {
+    "plugins": ["@stewmore/expo-ai-android-aicore"]
+  }
+}
+```
+
+Override the floor if your app already targets a higher API:
+
+```json
+{
+  "expo": {
+    "plugins": [["@stewmore/expo-ai-android-aicore", { "minSdkVersion": 31 }]]
+  }
+}
+```
+
 ## Requirements
 
 - A device with **AICore / Gemini Nano** (e.g. recent Pixel and Galaxy flagships), **Android API 26+**.
