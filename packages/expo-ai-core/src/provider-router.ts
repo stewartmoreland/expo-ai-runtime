@@ -14,14 +14,16 @@ import type {
   NormalizedGenerateRequest,
   NormalizedObjectRequest,
 } from './adapter.js';
+import { AsyncQueue } from './async-queue.js';
 import { ExpoAIError } from './errors.js';
 import { privacyModeForProvider } from './privacy.js';
 import { getAdapter, getRegisteredProviders, hasAdapter } from './registry.js';
 import { finalizeResult } from './result.js';
 import { createStreamIterable, type StreamSource } from './stream-bridge.js';
-import { generateValidatedObject } from './structured-output.js';
+import { buildSchemaPrompt, generateValidatedObject, parsePartialJson } from './structured-output.js';
 import {
   defaultProviderPriority,
+  type DeepPartial,
   type ExpoAIAvailability,
   type ExpoAIFallback,
   type ExpoAIProvider,
@@ -29,6 +31,8 @@ import {
   type GenerateObjectOptions,
   type GenerateOptions,
   type GenerateResult,
+  type StreamObjectOptions,
+  type StreamObjectResult,
 } from './types.js';
 
 /* ------------------------------------------------------------------ */
@@ -361,6 +365,152 @@ async function* routeStreamGenerator(options: GenerateOptions): AsyncGenerator<G
     generateOnce: () => adapter.generate(req),
   };
   yield* createStreamIterable(source);
+}
+
+/* ------------------------------------------------------------------ */
+/* streamObject                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Stream a structured object: surface best-effort partial snapshots as tokens
+ * arrive, then resolve the validated (repaired) final object. Composes the same
+ * provider selection + schema prompt as {@link routeGenerateObjectWithMeta} with
+ * the streaming bridge; the streamed text seeds attempt 0 of the validate→repair
+ * loop, so repair only re-generates when the streamed JSON does not validate.
+ */
+export function routeStreamObject<T = unknown>(
+  options: StreamObjectOptions,
+): StreamObjectResult<T> {
+  const partialQueue = new AsyncQueue<DeepPartial<T>>();
+  const textQueue = new AsyncQueue<string>();
+
+  let resolveObject!: (value: T) => void;
+  let rejectObject!: (error: unknown) => void;
+  const objectPromise = new Promise<T>((resolve, reject) => {
+    resolveObject = resolve;
+    rejectObject = reject;
+  });
+  let resolveResult!: (value: GenerateResult) => void;
+  let rejectResult!: (error: unknown) => void;
+  const resultPromise = new Promise<GenerateResult>((resolve, reject) => {
+    resolveResult = resolve;
+    rejectResult = reject;
+  });
+  // A consumer may read only one of the four views; keep the unread promises
+  // from surfacing as unhandled rejections.
+  objectPromise.catch(() => {});
+  resultPromise.catch(() => {});
+
+  const fail = (error: unknown, provider: ExpoAIProvider): void => {
+    const normalized = ExpoAIError.from(error, provider);
+    rejectObject(normalized);
+    rejectResult(normalized);
+    textQueue.fail(normalized, true);
+    partialQueue.fail(normalized, true);
+  };
+
+  void (async () => {
+    const candidates = buildCandidateList(options);
+    if (candidates.length === 0) {
+      fail(noProviderError(), 'none');
+      return;
+    }
+    try {
+      validatePrompt(options.prompt, candidates[0] as ExpoAIProvider);
+    } catch (error) {
+      fail(error, candidates[0] as ExpoAIProvider);
+      return;
+    }
+
+    let selected: { adapter: ExpoAIAdapter; provider: ExpoAIProvider; usedFallback: boolean };
+    try {
+      selected = await selectAvailableAdapter(options);
+    } catch (error) {
+      fail(error, (error as ExpoAIError).provider ?? 'none');
+      return;
+    }
+    const { adapter, provider, usedFallback } = selected;
+
+    const baseReq = normalizeRequest(options);
+    const schemaPrompt = buildSchemaPrompt(options.prompt, options.schema, options.schemaName);
+    const streamReq: NormalizedGenerateRequest = { ...baseReq, prompt: schemaPrompt };
+
+    const source: StreamSource = {
+      provider,
+      usedFallback,
+      signal: streamReq.signal,
+      startNativeStream: adapter.stream ? (handlers) => adapter.stream!(streamReq, handlers) : null,
+      generateOnce: () => adapter.generate(streamReq),
+    };
+
+    let accumulated = '';
+    let lastSnapshot: string | undefined;
+    try {
+      for await (const chunk of createStreamIterable(source)) {
+        if (chunk.type !== 'delta') continue;
+        accumulated += chunk.text;
+        textQueue.push(chunk.text);
+        const partial = parsePartialJson(accumulated);
+        if (partial === null) continue;
+        const serialized = JSON.stringify(partial);
+        if (serialized !== lastSnapshot) {
+          lastSnapshot = serialized;
+          partialQueue.push(partial as DeepPartial<T>);
+        }
+      }
+    } catch (error) {
+      fail(error, provider);
+      return;
+    }
+    textQueue.close();
+
+    const objectReq: NormalizedObjectRequest = { ...baseReq, schema: options.schema };
+    if (options.schemaName !== undefined) objectReq.schemaName = options.schemaName;
+
+    try {
+      const validated = await withSignal(
+        generateValidatedObject({
+          provider,
+          schema: options.schema,
+          basePrompt: options.prompt,
+          seedText: accumulated,
+          ...(options.schemaName !== undefined ? { schemaName: options.schemaName } : {}),
+          ...(options.maxRepairAttempts !== undefined
+            ? { maxRepairAttempts: options.maxRepairAttempts }
+            : {}),
+          generateText: async (prompt) => (await adapter.generate({ ...baseReq, prompt })).text,
+          ...(adapter.generateObject
+            ? { nativeObject: async () => (await adapter.generateObject!(objectReq)).text }
+            : {}),
+        }),
+        options.signal,
+        provider,
+      );
+
+      // Ensure the final partial equals the validated object.
+      if (JSON.stringify(validated.object) !== lastSnapshot) {
+        partialQueue.push(validated.object as DeepPartial<T>);
+      }
+      partialQueue.close();
+
+      const result = finalizeResult(
+        { text: validated.raw, raw: validated.object },
+        provider,
+        usedFallback,
+      );
+      resolveObject(validated.object as T);
+      resolveResult(result);
+    } catch (error) {
+      fail(error, provider);
+    }
+  })();
+
+  return {
+    partialObjectStream: partialQueue,
+    textStream: textQueue,
+    object: objectPromise,
+    result: resultPromise,
+  };
 }
 
 /* ------------------------------------------------------------------ */
