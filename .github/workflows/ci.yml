@@ -16,8 +16,8 @@ permissions:
   id-token: write # required for npm Trusted Publisher (OIDC) publishing + provenance
 
 jobs:
-  verify:
-    name: Lint, typecheck, build & test
+  js-layer:
+    name: JS — lint, typecheck, build, test + coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -29,11 +29,40 @@ jobs:
       - run: npm run lint
       - run: npm run build # build first so cross-package type declarations exist for typecheck
       - run: npm run typecheck
-      - run: npm test
+      - run: npm run test:coverage
+      # Coverage is informational only — never blocks the build (see codecov.yml).
+      - name: Upload coverage to Codecov
+        if: always()
+        continue-on-error: true
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # optional for public repos; set if private
+          files: packages/expo-ai-core/coverage/lcov.info,packages/expo-ai-cloud/coverage/lcov.info,packages/expo-ai-evals/coverage/lcov.info
+          fail_ci_if_error: false
+
+  api-surface:
+    name: API surface & package contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build # api-extractor + publint/attw consume the emitted build/ output
+      # Fails if the committed API report (etc/*.api.md) drifts from the public
+      # .d.ts — forces a conscious, semver-aware change. Regenerate with
+      # `npm run api:update` and commit the report.
+      - name: Check public API surface (api-extractor)
+        run: npm run api:check
+      # publint + are-the-types-wrong (esm-only profile) on each published package.
+      - name: Lint package publishing (publint + attw)
+        run: npm run pkg:lint
 
   release:
     name: Release & publish to npm
-    needs: verify
+    needs: [js-layer, api-surface]
     # On a merge/push to main, or a manual dispatch — never on PRs. The verify gate must pass first.
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest

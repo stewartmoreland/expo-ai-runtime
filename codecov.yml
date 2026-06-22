@@ -1,0 +1,24 @@
+# Coverage is informational only for now: it reports on PRs and tracks trends,
+# but never blocks a merge. Tighten to real targets once a baseline settles.
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+
+comment:
+  layout: "reach, diff, flags, files"
+  require_changes: false
+
+# Only the pure-TS packages are unit-tested; ignore everything else so the
+# reported percentage reflects the code that actually has coverage.
+ignore:
+  - "packages/expo-ai-apple-foundation-models"
+  - "packages/expo-ai-android-aicore"
+  - "examples"
+  - "website"
+  - "**/*.test.ts"
+  - "**/__tests__/**"

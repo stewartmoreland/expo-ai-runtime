@@ -28,6 +28,9 @@ examples/*/android/
 # Test / coverage
 coverage/
 
+# API Extractor working dir (the report is committed under packages/*/etc/)
+packages/*/temp/
+
 # Logs
 *.log
 npm-debug.*

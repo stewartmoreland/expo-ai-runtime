@@ -27,6 +27,7 @@
     "clean": "rm -rf build",
     "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "eval": "tsx src/cli.ts"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^4.1.9",
     "tsx": "^4.19.2",
     "typescript": "~6.0.3",
     "vitest": "^4.1.9"

@@ -1,0 +1,156 @@
+name: Native
+
+# Native lint + compile gates. Scoped to changes that can affect the native
+# modules (or the example app they compile through) so JS-only PRs skip the
+# expensive macOS/Gradle runners. The always-on required checks live in ci.yml.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/expo-ai-apple-foundation-models/**"
+      - "packages/expo-ai-android-aicore/**"
+      - "examples/basic-generate/**"
+      - "package-lock.json"
+      - ".github/workflows/native.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/expo-ai-apple-foundation-models/**"
+      - "packages/expo-ai-android-aicore/**"
+      - "examples/basic-generate/**"
+      - "package-lock.json"
+      - ".github/workflows/native.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The example app whose generated ios/ + android/ projects host the native
+  # compile (Expo modules don't build standalone). It depends on all packages.
+  EXAMPLE: examples/basic-generate
+  SWIFTLINT_VERSION: "0.64.0"
+  KTLINT_VERSION: "1.8.0"
+  DETEKT_VERSION: "1.23.8"
+
+jobs:
+  swift-layer:
+    name: Swift — lint + compile (iOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      # --- Lint (source-only, no Xcode needed): BLOCKING ---
+      - name: Install Swift lint tools
+        run: brew install swiftlint swiftformat
+      - name: SwiftLint (strict)
+        working-directory: packages/expo-ai-apple-foundation-models
+        run: swiftlint lint --strict
+      - name: SwiftFormat (lint)
+        working-directory: packages/expo-ai-apple-foundation-models
+        run: swiftformat --lint ios
+
+      # --- Compile: BLOCKING when the FoundationModels SDK is present ---
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Gate compile on Xcode >= 26 (FoundationModels SDK)
+        id: xcodegate
+        # FoundationModels ships in the iOS 26 SDK (Xcode 26). On older Xcode the
+        # `#if canImport(FoundationModels)` code is compiled out, so the build
+        # would pass without ever type-checking it — a hollow check. Skip with a
+        # loud warning instead of failing, so runner gaps don't block PRs.
+        run: |
+          XCODE_MAJOR=$(xcodebuild -version | sed -nE 's/^Xcode ([0-9]+).*/\1/p')
+          echo "Detected Xcode major: ${XCODE_MAJOR}"
+          if [ -z "$XCODE_MAJOR" ] || [ "$XCODE_MAJOR" -lt 26 ]; then
+            echo "::warning::Xcode ${XCODE_MAJOR:-unknown} < 26 — FoundationModels SDK absent; skipping the iOS compile (it would not type-check the FM code)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install dependencies
+        if: steps.xcodegate.outputs.skip != 'true'
+        run: npm ci
+      - name: Prebuild iOS project
+        if: steps.xcodegate.outputs.skip != 'true'
+        working-directory: ${{ env.EXAMPLE }}
+        env:
+          CI: "1"
+        run: npx expo prebuild -p ios --no-install --clean
+      - name: pod install
+        if: steps.xcodegate.outputs.skip != 'true'
+        working-directory: ${{ env.EXAMPLE }}/ios
+        run: pod install
+      # Compile only the ExpoAIApple pod target, not the whole app scheme: the
+      # example pulls unrelated pods (e.g. @expo/dom-webview) that may not
+      # compile on the runner's Xcode, which would mask whether OUR module is
+      # sound. This builds the module + its deps (ExpoModulesCore) in isolation.
+      - name: xcodebuild (compile ExpoAIApple module only)
+        if: steps.xcodegate.outputs.skip != 'true'
+        working-directory: ${{ env.EXAMPLE }}/ios
+        run: |
+          xcodebuild build \
+            -project Pods/Pods.xcodeproj \
+            -target ExpoAIApple \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO
+
+  kotlin-layer:
+    name: Kotlin — lint + compile (Android)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # --- Lint (source-only): BLOCKING ---
+      - name: Install ktlint + detekt
+        run: |
+          curl -sSLO "https://github.com/pinterest/ktlint/releases/download/${KTLINT_VERSION}/ktlint"
+          chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
+          curl -sSLO "https://github.com/detekt/detekt/releases/download/v${DETEKT_VERSION}/detekt-cli-${DETEKT_VERSION}.zip"
+          unzip -q "detekt-cli-${DETEKT_VERSION}.zip"
+          echo "DETEKT=$PWD/detekt-cli-${DETEKT_VERSION}/bin/detekt" >> "$GITHUB_ENV"
+      - name: ktlint
+        working-directory: packages/expo-ai-android-aicore
+        run: ktlint "android/src/main/java/**/*.kt"
+      - name: detekt
+        working-directory: packages/expo-ai-android-aicore
+        run: >-
+          "$DETEKT" --input android/src/main/java
+          --config android/config/detekt/detekt.yml --build-upon-default-config
+
+      # --- Compile: BLOCKING ---
+      - name: Install dependencies
+        run: npm ci
+      - name: Prebuild Android project
+        working-directory: ${{ env.EXAMPLE }}
+        env:
+          CI: "1"
+        run: npx expo prebuild -p android --no-install --clean
+      # Assemble only the AICore module (its Gradle project name is derived from
+      # the package name), not the whole RN app — faster and isolated.
+      - name: Gradle assemble (compiles the Kotlin module)
+        working-directory: ${{ env.EXAMPLE }}/android
+        run: ./gradlew :stewmore-expo-ai-android-aicore:assembleDebug --no-daemon --stacktrace
+      - name: Android Lint (warn-only)
+        working-directory: ${{ env.EXAMPLE }}/android
+        continue-on-error: true
+        run: ./gradlew :stewmore-expo-ai-android-aicore:lintDebug --no-daemon

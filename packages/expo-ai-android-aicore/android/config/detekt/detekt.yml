@@ -1,0 +1,12 @@
+# Detekt config for the Android AICore native module.
+# Run with `--build-upon-default-config`: this file only overrides the rules
+# that conflict with the runtime's deliberate design.
+exceptions:
+  TooGenericExceptionCaught:
+    # The native bridge intentionally catches broadly so every provider/native
+    # error is normalized into ExpoAIError at the boundary (see CLAUDE.md).
+    active: false
+  SwallowedException:
+    # Same boundary-normalization pattern: the original error is mapped to a
+    # normalized payload, not rethrown.
+    active: false

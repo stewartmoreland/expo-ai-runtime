@@ -1,0 +1,23 @@
+# SwiftLint config for the Apple Foundation Models native module.
+included:
+  - ios
+
+# Trailing commas in multiline literals are the house style (matches the repo's
+# Prettier `trailingComma: all`), and SwiftFormat is configured to keep them.
+disabled_rules:
+  - trailing_comma
+
+line_length:
+  warning: 120
+  error: 160
+
+# The Expo `Module` DSL and the streaming closure are naturally long but flat;
+# raise the threshold rather than fragmenting readable native scaffolding.
+function_body_length:
+  warning: 80
+  error: 120
+
+identifier_name:
+  min_length: 2
+  excluded:
+    - id
