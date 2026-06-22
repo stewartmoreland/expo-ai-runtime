@@ -16,7 +16,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "api:check": "api-extractor run --verbose --config packages/expo-ai-core/api-extractor.json",
     "api:update": "api-extractor run --local --verbose --config packages/expo-ai-core/api-extractor.json",
-    "pkg:lint": "publint packages/expo-ai-core && publint packages/expo-ai-cloud && publint packages/expo-ai-evals && attw --pack packages/expo-ai-core --profile esm-only && attw --pack packages/expo-ai-cloud --profile esm-only && attw --pack packages/expo-ai-evals --profile esm-only",
+    "pkg:lint": "publint packages/expo-ai-core && publint packages/expo-ai-cloud && publint packages/expo-ai-evals && publint packages/expo-ai-react && attw --pack packages/expo-ai-core --profile esm-only && attw --pack packages/expo-ai-cloud --profile esm-only && attw --pack packages/expo-ai-evals --profile esm-only && attw --pack packages/expo-ai-react --profile esm-only",
     "size": "size-limit",
     "lint": "eslint .",
     "format:check": "prettier --check .",

@@ -37,7 +37,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # optional for public repos; set if private
-          files: packages/expo-ai-core/coverage/lcov.info,packages/expo-ai-cloud/coverage/lcov.info,packages/expo-ai-evals/coverage/lcov.info
+          files: packages/expo-ai-core/coverage/lcov.info,packages/expo-ai-cloud/coverage/lcov.info,packages/expo-ai-evals/coverage/lcov.info,packages/expo-ai-react/coverage/lcov.info
           fail_ci_if_error: false
 
   api-surface:

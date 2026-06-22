@@ -1,0 +1,59 @@
+{
+  "name": "@stewmore/expo-ai-react",
+  "version": "0.1.0",
+  "description": "React hooks for the Expo AI Runtime: useGenerate, useChat, useObject, useCapabilities — ai/react-style ergonomics over the on-device, privacy-first core.",
+  "license": "MIT",
+  "author": "Stewart Moreland <stewart.moreland@gmail.com>",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "./build/index.js",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    }
+  },
+  "files": [
+    "build",
+    "src"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "expo",
+    "react-native",
+    "react",
+    "hooks",
+    "ai",
+    "on-device",
+    "streaming"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
+    "clean": "rm -rf build",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@stewmore/expo-ai-core": "^0.1.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "~19.2.0",
+    "@vitest/coverage-v8": "^4.1.9",
+    "jsdom": "^26.0.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.9"
+  }
+}
