@@ -46,6 +46,10 @@ jobs:
           ref: main # check out the branch (not a detached SHA) so the release commit can push back
           fetch-depth: 0 # release-it needs full history + tags to compute the bump
           fetch-tags: true
+          # main is protected by a ruleset; the default GITHUB_TOKEN can't be granted
+          # bypass on a personal repo. Push with a PAT owned by a repo admin, who is a
+          # bypass actor on the ruleset, so the release commit/tag can land on main.
+          token: ${{ secrets.RELEASE_TOKEN }}
       - uses: actions/setup-node@v6
         with:
           node-version: 24 # >= 22.14.0 required for npm Trusted Publisher OIDC
