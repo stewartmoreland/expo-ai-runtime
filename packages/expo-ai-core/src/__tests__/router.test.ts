@@ -49,6 +49,70 @@ describe('provider router — selection & priority', () => {
   });
 });
 
+describe('provider router — zero-config first-run messaging', () => {
+  it('guides the developer to install a provider package when none is registered', async () => {
+    await expect(ExpoAI.generate({ prompt: 'hi' })).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      provider: 'none',
+      message: expect.stringContaining('Install and import a provider package'),
+    });
+  });
+
+  it('the install guidance names the provider packages and self-registration', async () => {
+    const error = await ExpoAI.generate({ prompt: 'hi' }).catch((e: unknown) => e as Error);
+    expect(error.message).toContain('@stewmore/expo-ai-apple-foundation-models');
+    expect(error.message).toContain('@stewmore/expo-ai-android-aicore');
+    expect(error.message).toContain('@stewmore/expo-ai-cloud');
+    expect(error.message).toContain('self-register on import');
+  });
+
+  it('points at the routing policy when providers are registered but all gated out', async () => {
+    // Only a cloud provider is registered, but the default fallback is 'none',
+    // so the cloud candidate is gated out and the list is empty.
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'cloud' }));
+
+    const error = await ExpoAI.generate({ prompt: 'hi' }).catch((e: unknown) => e as Error);
+    expect(error).toMatchObject({ code: 'UNAVAILABLE', provider: 'none' });
+    expect(error.message).toContain('excluded by the routing policy');
+    expect(error.message).toContain('cloud');
+    // It must NOT show the install guidance — a provider *is* registered.
+    expect(error.message).not.toContain('Install and import a provider package');
+  });
+
+  it('streaming surfaces the same install guidance when no provider is registered', async () => {
+    const iterator = ExpoAI.stream({ prompt: 'hi' })[Symbol.asyncIterator]();
+    await expect(iterator.next()).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      provider: 'none',
+      message: expect.stringContaining('Install and import a provider package'),
+    });
+  });
+
+  it('generateObject surfaces the same install guidance when no provider is registered', async () => {
+    await expect(
+      ExpoAI.generateObject({ prompt: 'hi', schema: { type: 'object' } }),
+    ).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      provider: 'none',
+      message: expect.stringContaining('Install and import a provider package'),
+    });
+  });
+
+  it('keeps the provider-specific reason when a registered provider is unavailable', async () => {
+    registerAdapter(
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        available: false,
+        reasonUnavailable: 'apple_intelligence_disabled',
+      }),
+    );
+
+    const error = await ExpoAI.generate({ prompt: 'hi' }).catch((e: unknown) => e as Error);
+    expect(error).toMatchObject({ code: 'UNAVAILABLE', provider: 'apple-foundation-models' });
+    expect(error.message).toContain('apple_intelligence_disabled');
+  });
+});
+
 describe('provider router — fallback', () => {
   it('falls back to cloud when the system provider is unavailable and fallback is cloud', async () => {
     registerAdapter(
