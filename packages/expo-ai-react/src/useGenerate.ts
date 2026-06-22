@@ -62,12 +62,19 @@ export function useGenerate(): UseGenerateResult {
     return controller;
   }, []);
 
+  // Only the controller still owning the ref may write state — a superseded
+  // call (aborted by a newer begin()) must not clobber the live request.
+  const isCurrent = useCallback((controller: AbortController) => {
+    return controllerRef.current === controller;
+  }, []);
+
   const finish = useCallback(
     (controller: AbortController) => {
-      if (controllerRef.current === controller) controllerRef.current = null;
+      if (!isCurrent(controller)) return;
+      controllerRef.current = null;
       if (mounted.current) setIsLoading(false);
     },
-    [mounted],
+    [isCurrent, mounted],
   );
 
   const generate = useCallback(
@@ -75,20 +82,22 @@ export function useGenerate(): UseGenerateResult {
       const controller = begin();
       try {
         const generated = await ExpoAI.generate({ ...options, signal: controller.signal });
-        if (mounted.current && controllerRef.current === controller) {
+        if (mounted.current && isCurrent(controller)) {
           setResult(generated);
           setText(generated.text);
         }
         return generated;
       } catch (caught) {
         const normalized = toError(caught);
-        if (mounted.current && !isCancelled(normalized)) setError(normalized);
+        if (mounted.current && isCurrent(controller) && !isCancelled(normalized)) {
+          setError(normalized);
+        }
         return undefined;
       } finally {
         finish(controller);
       }
     },
-    [begin, finish, mounted],
+    [begin, finish, isCurrent, mounted],
   );
 
   const stream = useCallback(
@@ -97,7 +106,7 @@ export function useGenerate(): UseGenerateResult {
       let final: GenerateResult | undefined;
       try {
         for await (const chunk of ExpoAI.stream({ ...options, signal: controller.signal })) {
-          if (controllerRef.current !== controller) break;
+          if (!isCurrent(controller)) break;
           if (chunk.type === 'delta') {
             if (mounted.current) setText((current) => current + chunk.text);
           } else if (chunk.type === 'done') {
@@ -108,13 +117,15 @@ export function useGenerate(): UseGenerateResult {
         return final;
       } catch (caught) {
         const normalized = toError(caught);
-        if (mounted.current && !isCancelled(normalized)) setError(normalized);
+        if (mounted.current && isCurrent(controller) && !isCancelled(normalized)) {
+          setError(normalized);
+        }
         return undefined;
       } finally {
         finish(controller);
       }
     },
-    [begin, finish, mounted],
+    [begin, finish, isCurrent, mounted],
   );
 
   return { generate, stream, text, result, isLoading, error, stop, reset };

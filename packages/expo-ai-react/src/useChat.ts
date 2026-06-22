@@ -34,7 +34,7 @@ export type UseChatResult = {
 /**
  * A streaming chat transcript over a cross-platform {@link ExpoAISession}. The
  * session is created lazily on the first `append` and disposed on unmount.
- * `options` is captured on first use; change it via `reset()` if needed.
+ * `options` is captured on first use; later changes are ignored.
  */
 export function useChat(options?: CreateSessionOptions): UseChatResult {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -77,6 +77,7 @@ export function useChat(options?: CreateSessionOptions): UseChatResult {
       controllerRef.current?.abort();
       const controller = new AbortController();
       controllerRef.current = controller;
+      const isCurrent = () => controllerRef.current === controller;
 
       const assistantId = nextId('assistant');
       setMessages((prev) => [
@@ -90,11 +91,20 @@ export function useChat(options?: CreateSessionOptions): UseChatResult {
 
       try {
         if (!sessionRef.current) {
-          sessionRef.current = await ExpoAI.createSession(optionsRef.current);
+          // createSession is not abortable; if we unmounted (or another append
+          // already created one) while it was pending, dispose this one.
+          const created = await ExpoAI.createSession(optionsRef.current);
+          if (!mounted.current || sessionRef.current) {
+            void created.dispose().catch(() => {});
+            if (!mounted.current) return;
+          } else {
+            sessionRef.current = created;
+          }
         }
         const session = sessionRef.current;
+        if (!session) return;
         for await (const chunk of session.stream({ prompt: text, signal: controller.signal })) {
-          if (controllerRef.current !== controller) break;
+          if (!isCurrent()) break;
           if (chunk.type === 'delta' && mounted.current) {
             setMessages((prev) =>
               prev.map((message) =>
@@ -107,10 +117,18 @@ export function useChat(options?: CreateSessionOptions): UseChatResult {
         }
       } catch (caught) {
         const normalized = toError(caught);
-        if (mounted.current && !isCancelled(normalized)) setError(normalized);
+        if (mounted.current && isCurrent()) {
+          // Drop the still-empty assistant placeholder; surface the error instead.
+          setMessages((prev) =>
+            prev.filter((message) => !(message.id === assistantId && message.content === '')),
+          );
+          if (!isCancelled(normalized)) setError(normalized);
+        }
       } finally {
-        if (controllerRef.current === controller) controllerRef.current = null;
-        if (mounted.current) setIsLoading(false);
+        if (isCurrent()) {
+          controllerRef.current = null;
+          if (mounted.current) setIsLoading(false);
+        }
       }
     },
     [input, mounted, nextId],
