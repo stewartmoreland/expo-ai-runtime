@@ -1,0 +1,6 @@
+# Code owners for expo-ai-runtime
+# The owner is requested for review on every PR and (via the branch ruleset's
+# admin bypass) can self-merge while repo interaction is limited.
+# Docs: https://docs.github.com/articles/about-code-owners
+
+* @stewartmoreland
