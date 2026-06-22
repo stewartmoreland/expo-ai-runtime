@@ -4,11 +4,21 @@ title: Capability detection
 sidebar_position: 3
 ---
 
+import CapabilityMatrix from '@site/src/components/CapabilityMatrix';
+
 # Capability detection
 
 Every app-facing feature should check capabilities at runtime before it's shown. A
 device may not support a provider at all, or may support generation but not streaming or
 structured output.
+
+## What works where
+
+<CapabilityMatrix />
+
+The core features — structured output, `streamObject`, and the task helpers — are
+provider-agnostic, so they work wherever text generation does. On-device engines still
+gate at runtime; always check `getCapabilities()` before showing a feature.
 
 ```ts
 export type ExpoAICapabilities = {

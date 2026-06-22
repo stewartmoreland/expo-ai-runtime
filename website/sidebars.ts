@@ -29,10 +29,21 @@ const sidebars: SidebarsConfig = {
       label: 'Packages',
       items: [
         'packages/core',
+        'packages/react',
         'packages/apple-foundation-models',
         'packages/android-aicore',
         'packages/cloud',
         'packages/evals',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Recipes',
+      items: [
+        'recipes/streaming-chat',
+        'recipes/structured-streaming',
+        'recipes/capability-gated-ui',
+        'recipes/cloud-fallback',
       ],
     },
     {

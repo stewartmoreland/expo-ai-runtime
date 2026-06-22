@@ -41,3 +41,40 @@ const result = await ExpoAI.generateObject({
 
 The validation and repair loop lives in `expo-ai-core`, so structured output behaves
 consistently regardless of which provider answered.
+
+## streamObject
+
+`streamObject` streams a structured object as it is generated: subscribe to
+`partialObjectStream` for progressively-complete snapshots as tokens arrive, and/or
+await `object` for the validated (repaired) final value. All four views are backed by
+one generation; on failure the streams throw and the promises reject with the same
+`ExpoAIError`.
+
+```ts
+const { partialObjectStream, object, result } = ExpoAI.streamObject({
+  prompt: 'Extract project name, budget, timeline, and risks.',
+  schema: {
+    type: 'object',
+    properties: {
+      projectName: { type: 'string' },
+      risks: { type: 'array', items: { type: 'string' } },
+    },
+    required: ['projectName', 'risks'],
+  },
+  fallback: 'cloud',
+});
+
+// Render the object filling in, field by field, as tokens arrive.
+for await (const partial of partialObjectStream) {
+  render(partial); // DeepPartial<T> — the last snapshot equals `object`
+}
+
+const final = await object; // validated, schema-conforming
+console.log((await result).provider);
+```
+
+The streamed text seeds the validate→repair loop, so a second generation only happens
+if the streamed JSON doesn't validate. Partial snapshots are best-effort and may briefly
+omit the field currently streaming — the final `object` is always validated.
+
+In React, [`useObject`](../packages/react.md#useobject) wraps this into component state.

@@ -1,0 +1,70 @@
+.wrap {
+  margin: 0 0 8px;
+}
+
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--eai-card);
+  border: 1px solid var(--eai-border);
+  border-radius: var(--eai-radius);
+  overflow: hidden;
+  display: table;
+}
+
+.matrix th,
+.matrix td {
+  border: 1px solid var(--eai-border);
+  padding: 10px 12px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.capHead {
+  text-align: left;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--eai-subtle);
+}
+
+.provHead {
+  display: table-cell;
+}
+
+.provLabel {
+  display: block;
+  font-weight: 600;
+}
+
+.provMeta {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--eai-subtle);
+  margin-bottom: 6px;
+}
+
+.capCell {
+  text-align: left;
+  font-weight: 500;
+}
+
+.cell {
+  font-size: 1.05rem;
+}
+
+.yes {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.no {
+  color: var(--eai-subtle);
+}
+
+.caption {
+  font-size: 0.82rem;
+  color: var(--eai-subtle);
+  margin-top: 8px;
+  line-height: 1.5;
+}
