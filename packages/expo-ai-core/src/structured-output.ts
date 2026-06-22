@@ -261,12 +261,12 @@ export function parseJson(text: string): ParseResult {
 /**
  * Close the open structures of a (possibly truncated) JSON prefix: terminate an
  * open string, then append the matching closers for every unclosed `{`/`[`.
- * String-aware (handles escapes). Returns null if the prefix is structurally
- * impossible (a stray `}`/`]` with nothing open). Does not strip trailing
- * commas/colons — {@link parsePartialJson} trims those by backing off.
+ * String-aware (handles escapes). Returns null when the prefix is structurally
+ * impossible — a stray or mismatched `}`/`]`. Does not strip trailing
+ * commas/colons; {@link parsePartialJson} trims those by retreating.
  */
 function closeOpenStructures(s: string): string | null {
-  const closers: string[] = [];
+  const openers: string[] = [];
   let inString = false;
   let escaped = false;
   for (let i = 0; i < s.length; i++) {
@@ -278,11 +278,11 @@ function closeOpenStructures(s: string): string | null {
       continue;
     }
     if (char === '"') inString = true;
-    else if (char === '{') closers.push('}');
-    else if (char === '[') closers.push(']');
-    else if (char === '}' || char === ']') {
-      if (closers.length === 0) return null; // unbalanced close
-      closers.pop();
+    else if (char === '{' || char === '[') openers.push(char);
+    else if (char === '}') {
+      if (openers.pop() !== '{') return null; // mismatched / unbalanced close
+    } else if (char === ']') {
+      if (openers.pop() !== '[') return null;
     }
   }
 
@@ -293,30 +293,98 @@ function closeOpenStructures(s: string): string | null {
     if (escaped) core = core.slice(0, -1);
     suffix += '"';
   }
-  for (let i = closers.length - 1; i >= 0; i--) suffix += closers[i];
+  for (let i = openers.length - 1; i >= 0; i--) suffix += openers[i] === '{' ? '}' : ']';
   return core + suffix;
 }
 
+/** Index just past the first complete, balanced top-level value, or -1. */
+function firstCompleteValueEnd(s: string): number {
+  let depth = 0;
+  let opened = false;
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < s.length; i++) {
+    const char = s[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === '{' || char === '[') {
+      depth++;
+      opened = true;
+    } else if (char === '}' || char === ']') {
+      depth--;
+      if (depth < 0) return -1;
+      if (opened && depth === 0) return i + 1;
+    }
+  }
+  return -1;
+}
+
 /**
- * Best-effort parse of possibly-incomplete JSON (a streaming snapshot). Finds the
- * first `{`/`[`, then closes the open structures; if that does not parse (a
- * dangling key, trailing comma, half-typed number, or a code fence), it trims one
- * character at a time and retries until something parses. Returns null when no
- * prefix yields valid JSON. Never throws.
+ * The retreat point for a prefix that won't complete: just after the last
+ * unquoted `{`/`[` (keep the opener, drop its half-typed contents) or at the
+ * last unquoted `,` (drop the dangling entry), whichever is later.
+ */
+function retreatIndex(s: string): number {
+  let inString = false;
+  let escaped = false;
+  let cut = 0;
+  for (let i = 0; i < s.length; i++) {
+    const char = s[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === '{' || char === '[') cut = i + 1;
+    else if (char === ',') cut = i;
+  }
+  return cut;
+}
+
+/**
+ * Best-effort parse of possibly-incomplete JSON (a streaming snapshot). Strategy,
+ * all string-aware and O(n) per call:
+ *   1. If a complete top-level value exists (e.g. `{...}` followed by prose),
+ *      parse just that — trailing junk never triggers a slow scan.
+ *   2. Otherwise close the open structures of the whole prefix and parse.
+ *   3. If that fails (a dangling key/colon/comma or half-typed literal), retreat
+ *      to the last structural boundary and retry, bounded by nesting depth.
+ * Returns null when nothing parses. Never throws.
  *
- * Intentionally lenient: a snapshot may briefly omit the field currently being
- * streamed — that is the correct behavior for partial-object streaming UIs.
+ * Intentionally lenient: a snapshot may briefly omit (or, for an in-progress
+ * scalar, under-report) the field currently streaming — correct behavior for a
+ * partial-object streaming UI, since {@link ExpoAI.streamObject} always resolves
+ * the final value through schema validation.
  */
 export function parsePartialJson(text: string): unknown | null {
   const start = text.search(/[{[]/);
   if (start === -1) return null;
   const body = text.slice(start);
 
-  for (let end = body.length; end > 0; end--) {
-    const closed = closeOpenStructures(body.slice(0, end));
-    if (closed === null) continue;
-    const parsed = parseJson(closed);
+  const completeEnd = firstCompleteValueEnd(body);
+  if (completeEnd !== -1) {
+    const parsed = parseJson(body.slice(0, completeEnd));
     if (parsed.ok) return parsed.value;
+  }
+
+  let candidate = body;
+  for (let guard = 0; guard < 64 && candidate.length > 0; guard++) {
+    const closed = closeOpenStructures(candidate);
+    if (closed !== null) {
+      const parsed = parseJson(closed);
+      if (parsed.ok) return parsed.value;
+    }
+    const cut = retreatIndex(candidate);
+    const next = candidate.slice(0, cut);
+    if (next.length >= candidate.length) break; // no progress
+    candidate = next;
   }
   return null;
 }

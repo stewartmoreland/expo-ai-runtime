@@ -195,18 +195,23 @@ function withSignal<T>(
 ): Promise<T> {
   if (!signal) return promise;
   if (signal.aborted) return Promise.reject(new ExpoAIError({ code: 'CANCELLED', provider }));
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => {
-      signal.addEventListener(
-        'abort',
-        () => reject(new ExpoAIError({ code: 'CANCELLED', provider })),
-        {
-          once: true,
-        },
-      );
-    }),
-  ]);
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new ExpoAIError({ code: 'CANCELLED', provider }));
+    signal.addEventListener('abort', onAbort, { once: true });
+    // Remove the listener once the underlying work settles, so a reused signal
+    // (a "cancel the whole screen" controller) doesn't accumulate listeners.
+    const cleanup = () => signal.removeEventListener('abort', onAbort);
+    promise.then(
+      (value) => {
+        cleanup();
+        resolve(value);
+      },
+      (error) => {
+        cleanup();
+        reject(error);
+      },
+    );
+  });
 }
 
 /**
@@ -462,7 +467,9 @@ export function routeStreamObject<T = unknown>(
       fail(error, provider);
       return;
     }
-    textQueue.close();
+    // textQueue is closed only after the whole operation succeeds (below), so a
+    // failure during validation/repair — or a late abort — rejects textStream
+    // too, honoring the StreamObjectResult contract (all views fail together).
 
     const objectReq: NormalizedObjectRequest = { ...baseReq, schema: options.schema };
     if (options.schemaName !== undefined) objectReq.schemaName = options.schemaName;
@@ -492,6 +499,7 @@ export function routeStreamObject<T = unknown>(
         partialQueue.push(validated.object as DeepPartial<T>);
       }
       partialQueue.close();
+      textQueue.close();
 
       const result = finalizeResult(
         { text: validated.raw, raw: validated.object },

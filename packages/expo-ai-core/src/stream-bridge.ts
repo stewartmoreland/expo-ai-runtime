@@ -96,12 +96,21 @@ function raceAbort<T>(
   provider: ExpoAIProvider,
 ): Promise<T> {
   if (!signal) return promise;
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => {
-      const fail = () => reject(new ExpoAIError({ code: 'CANCELLED', provider }));
-      if (signal.aborted) fail();
-      else signal.addEventListener('abort', fail, { once: true });
-    }),
-  ]);
+  if (signal.aborted) return Promise.reject(new ExpoAIError({ code: 'CANCELLED', provider }));
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new ExpoAIError({ code: 'CANCELLED', provider }));
+    signal.addEventListener('abort', onAbort, { once: true });
+    // Remove the listener on settle so a reused signal doesn't leak listeners.
+    const cleanup = () => signal.removeEventListener('abort', onAbort);
+    promise.then(
+      (value) => {
+        cleanup();
+        resolve(value);
+      },
+      (error) => {
+        cleanup();
+        reject(error);
+      },
+    );
+  });
 }
