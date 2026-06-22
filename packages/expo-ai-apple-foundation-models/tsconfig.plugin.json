@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "plugin/src",
+    "outDir": "plugin/build",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": ["plugin/src"],
+  "exclude": ["plugin/src/**/*.test.ts", "plugin/src/__tests__/**"]
+}

@@ -16,6 +16,30 @@ if (caps.available && caps.provider === 'apple-foundation-models') {
 }
 ```
 
+## Config plugin
+
+The native module autolinks on its own, but add the config plugin so
+`expo prebuild` also sets the iOS deployment target the pod needs — no manual
+`expo-build-properties` editing:
+
+```json
+{
+  "expo": {
+    "plugins": ["@stewmore/expo-ai-apple-foundation-models"]
+  }
+}
+```
+
+Override the floor (defaults to `15.1`, the pod minimum) if needed:
+
+```json
+{
+  "expo": {
+    "plugins": [["@stewmore/expo-ai-apple-foundation-models", { "iosDeploymentTarget": "16.4" }]]
+  }
+}
+```
+
 ## Requirements
 
 - **iOS / iPadOS 26+** on an Apple Intelligence–capable device with Apple Intelligence enabled.
