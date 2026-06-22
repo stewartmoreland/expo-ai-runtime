@@ -16,7 +16,7 @@ import type {
 } from './adapter.js';
 import { ExpoAIError } from './errors.js';
 import { privacyModeForProvider } from './privacy.js';
-import { getAdapter, hasAdapter } from './registry.js';
+import { getAdapter, getRegisteredProviders, hasAdapter } from './registry.js';
 import { finalizeResult } from './result.js';
 import { createStreamIterable, type StreamSource } from './stream-bridge.js';
 import { generateValidatedObject } from './structured-output.js';
@@ -142,11 +142,33 @@ function unavailableError(provider: ExpoAIProvider, availability: ExpoAIAvailabi
   });
 }
 
+/**
+ * No provider could serve the request. This is the zero-config first-run signal,
+ * so the message guides the developer to the missing step. Two distinct cases:
+ *
+ *   - Nothing registered at all → they haven't installed/imported a provider
+ *     package yet (provider packages self-register on import).
+ *   - Providers registered but all gated out by the routing policy (e.g. only a
+ *     cloud provider is registered while `fallback` is `'none'`, or a sensitive
+ *     prompt was blocked from a third-party cloud) → point at the policy knob.
+ */
 function noProviderError(): ExpoAIError {
+  const registered = getRegisteredProviders();
+  const message =
+    registered.length === 0
+      ? 'No AI provider is registered. Install and import a provider package — ' +
+        '"@stewmore/expo-ai-apple-foundation-models" (iOS), ' +
+        '"@stewmore/expo-ai-android-aicore" (Android), or ' +
+        '"@stewmore/expo-ai-cloud" (cloud fallback) — then rebuild the app ' +
+        '(e.g. `npx expo prebuild`). Provider packages self-register on import.'
+      : `No eligible AI provider for this request. Registered provider(s) ` +
+        `[${registered.join(', ')}] were all excluded by the routing policy. ` +
+        "If you meant to use the cloud, pass fallback: 'cloud'; note a prompt " +
+        'marked sensitive is never sent to a third-party cloud.';
   return new ExpoAIError({
     code: 'UNAVAILABLE',
     provider: 'none',
-    message: 'No AI provider is available for this request.',
+    message,
     fallbackRecommended: false,
   });
 }
