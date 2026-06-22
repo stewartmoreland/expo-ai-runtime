@@ -54,24 +54,26 @@ export function useObject<T = unknown>(): UseObjectResult<T> {
       setError(null);
       setIsLoading(true);
 
+      const isCurrent = () => controllerRef.current === controller;
       const handle = ExpoAI.streamObject<T>({ ...options, signal: controller.signal });
       try {
         for await (const partial of handle.partialObjectStream) {
-          if (controllerRef.current !== controller) break;
+          if (!isCurrent()) break;
           if (mounted.current) setObject(partial);
         }
         const final = await handle.object;
-        if (mounted.current && controllerRef.current === controller) {
-          setObject(final as DeepPartial<T>);
-        }
+        if (mounted.current && isCurrent()) setObject(final as DeepPartial<T>);
         return final;
       } catch (caught) {
         const normalized = toError(caught);
-        if (mounted.current && !isCancelled(normalized)) setError(normalized);
+        // Only the live submit may write state — a superseded one must not clobber it.
+        if (mounted.current && isCurrent() && !isCancelled(normalized)) setError(normalized);
         return undefined;
       } finally {
-        if (controllerRef.current === controller) controllerRef.current = null;
-        if (mounted.current) setIsLoading(false);
+        if (isCurrent()) {
+          controllerRef.current = null;
+          if (mounted.current) setIsLoading(false);
+        }
       }
     },
     [mounted],

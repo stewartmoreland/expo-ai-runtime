@@ -73,7 +73,7 @@ describe('useChat', () => {
     expect(result.current.messages).toHaveLength(0);
   });
 
-  it('surfaces a non-cancellation error', async () => {
+  it('surfaces a non-cancellation error and drops the empty assistant bubble', async () => {
     registerAdapter(
       createMockAdapter({ provider: 'cloud', throwError: { code: 'SAFETY_BLOCKED' } }),
     );
@@ -85,5 +85,19 @@ describe('useChat', () => {
 
     await waitFor(() => expect(result.current.error?.code).toBe('SAFETY_BLOCKED'));
     expect(result.current.isLoading).toBe(false);
+    // The user message stays; the never-filled assistant placeholder is removed.
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0]).toMatchObject({ role: 'user', content: 'hi' });
+  });
+
+  it('does not leave an empty assistant bubble when no provider is registered', async () => {
+    const { result } = renderHook(() => useChat());
+    await act(async () => {
+      await result.current.append('hi');
+    });
+
+    expect(result.current.error?.code).toBe('UNAVAILABLE');
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0]?.role).toBe('user');
   });
 });
