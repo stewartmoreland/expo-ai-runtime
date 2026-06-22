@@ -12,7 +12,12 @@
   "scripts": {
     "build": "npm run build -w @stewmore/expo-ai-core && npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "api:check": "api-extractor run --verbose --config packages/expo-ai-core/api-extractor.json",
+    "api:update": "api-extractor run --local --verbose --config packages/expo-ai-core/api-extractor.json",
+    "pkg:lint": "publint packages/expo-ai-core && publint packages/expo-ai-cloud && publint packages/expo-ai-evals && attw --pack packages/expo-ai-core --profile esm-only && attw --pack packages/expo-ai-cloud --profile esm-only && attw --pack packages/expo-ai-evals --profile esm-only",
+    "size": "size-limit",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
@@ -22,14 +27,19 @@
     "release": "release-it"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
     "@eslint/js": "^9.39.4",
+    "@microsoft/api-extractor": "^7.52.8",
     "@release-it-plugins/workspaces": "^6.0.0",
     "@release-it/conventional-changelog": "^11.0.1",
+    "@size-limit/preset-small-lib": "^11.2.0",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.6.0",
     "prettier": "^3.8.4",
+    "publint": "^0.3.12",
     "release-it": "^19.2.4",
+    "size-limit": "^11.2.0",
     "typescript-eslint": "^8.61.1"
   },
   "engines": {

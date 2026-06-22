@@ -14,16 +14,17 @@ applyKotlinExpoModulesCorePlugin()
 // Aligns compile/target SDK and Kotlin/JVM versions with the host Expo project.
 useCoreDependencies()
 useExpoPublishing()
+// Sets compileSdk/targetSdk (36) + the default minSdk and `lintOptions
+// { abortOnError false }`. Required: the Android Gradle Plugin errors without
+// an explicit compileSdk, which this helper supplies.
+useDefaultAndroidSdkVersions()
 
 android {
   namespace "expo.modules.ai.aicore"
   defaultConfig {
-    // ML Kit GenAI / AICore (Gemini Nano) requires API 26+.
+    // ML Kit GenAI / AICore (Gemini Nano) requires API 26+ — overrides the
+    // Expo default (24) set by useDefaultAndroidSdkVersions() above.
     minSdkVersion 26
-  }
-
-  lintOptions {
-    abortOnError false
   }
 }
 
@@ -31,8 +32,10 @@ dependencies {
   implementation project(':expo-modules-core')
 
   // ML Kit GenAI Prompt API (free-form generation via Gemini Nano / AICore).
-  // NOTE: this is a beta artifact; bump the version to the latest released
-  //       com.google.mlkit:genai-prompt when building.
+  // NOTE: beta artifact. Pinned (not a `+` range) so the build is reproducible;
+  //       `1.0.0-beta1` is confirmed published on Google's Maven. Latest release
+  //       is `1.0.0-beta2` — the kotlin-layer CI compile job guards any bump
+  //       (the Prompt API symbol names are still unverified against the SDK).
   implementation "com.google.mlkit:genai-prompt:1.0.0-beta1"
 
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"

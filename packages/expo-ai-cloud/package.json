@@ -34,12 +34,14 @@
     "prepack": "npm run build",
     "clean": "rm -rf build",
     "typecheck": "tsc --noEmit -p tsconfig.build.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@stewmore/expo-ai-core": "^0.1.0"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.9",
     "typescript": "~6.0.3",
     "vitest": "^4.1.9"
   }

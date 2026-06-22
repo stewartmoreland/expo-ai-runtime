@@ -1,0 +1,12 @@
+[
+  {
+    "name": "@stewmore/expo-ai-core",
+    "path": "packages/expo-ai-core/build/index.js",
+    "limit": "15 kB"
+  },
+  {
+    "name": "@stewmore/expo-ai-cloud",
+    "path": "packages/expo-ai-cloud/build/index.js",
+    "limit": "10 kB"
+  }
+]

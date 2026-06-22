@@ -18,7 +18,11 @@ import kotlinx.coroutines.flow.map
  * `checkStatus()`, `GenerateContentResponse.text`, and `FeatureStatus` symbol
  * names against the installed SDK version.
  */
-class AICoreGeminiNanoAdapter(private val context: Context) {
+class AICoreGeminiNanoAdapter(
+  // Retained for the ML Kit GenAI client wiring once the beta Prompt API
+  // surface (see NOTE above) is confirmed; not referenced by the current calls.
+  @Suppress("UnusedPrivateProperty") private val context: Context,
+) {
   private var cached: GenerativeModel? = null
 
   private fun model(): GenerativeModel {
@@ -52,11 +56,14 @@ class AICoreGeminiNanoAdapter(private val context: Context) {
 
   suspend fun generate(options: Map<String, Any?>): Map<String, Any?> {
     val response = model().generateContent(buildPrompt(options))
-    return mapOf("text" to (response.text ?: ""), "finishReason" to "stop")
+    val text = response.candidates.firstOrNull()?.text ?: ""
+    return mapOf("text" to text, "finishReason" to "stop")
   }
 
   fun generateStream(options: Map<String, Any?>): Flow<String> {
-    return model().generateContentStream(buildPrompt(options)).map { it.text ?: "" }
+    return model()
+      .generateContentStream(buildPrompt(options))
+      .map { it.candidates.firstOrNull()?.text ?: "" }
   }
 
   /** Trigger / await the on-device model download. */

@@ -7,8 +7,8 @@ import com.google.mlkit.genai.common.GenAiException
  * understands (docs/prd.md §16). AICore "BUSY"/initializing is treated as
  * retryable (docs/prd.md §11).
  *
- * NOTE: the GenAiException error-code constants below follow the ML Kit GenAI
- * docs; confirm the exact symbol names against the installed SDK.
+ * The GenAiException error-code constants live on the nested
+ * `GenAiException.ErrorCode` interface (genai-common 1.0.0-beta3).
  */
 object AndroidErrorMapper {
   const val PROVIDER = "android-aicore-gemini-nano"
@@ -20,25 +20,25 @@ object AndroidErrorMapper {
 
     if (error is GenAiException) {
       when (error.errorCode) {
-        GenAiException.NOT_AVAILABLE,
-        GenAiException.AICORE_INCOMPATIBLE -> {
+        GenAiException.ErrorCode.NOT_AVAILABLE,
+        GenAiException.ErrorCode.AICORE_INCOMPATIBLE -> {
           code = "UNSUPPORTED_DEVICE"
         }
-        GenAiException.NEEDS_SYSTEM_UPDATE -> {
+        GenAiException.ErrorCode.NEEDS_SYSTEM_UPDATE -> {
           code = "USER_SETTING_REQUIRED"
         }
-        GenAiException.BUSY -> {
+        GenAiException.ErrorCode.BUSY -> {
           // AICore is busy / still initializing — retry, or fall back.
           code = "MODEL_NOT_READY"
           retryable = true
         }
-        GenAiException.REQUEST_TOO_LARGE -> {
+        GenAiException.ErrorCode.REQUEST_TOO_LARGE -> {
           code = "CONTEXT_WINDOW_EXCEEDED"
         }
-        GenAiException.NOT_ENOUGH_DISK_SPACE -> {
+        GenAiException.ErrorCode.NOT_ENOUGH_DISK_SPACE -> {
           code = "MODEL_DOWNLOAD_REQUIRED"
         }
-        GenAiException.CANCELLED -> {
+        GenAiException.ErrorCode.CANCELLED -> {
           code = "CANCELLED"
           fallbackRecommended = false
         }

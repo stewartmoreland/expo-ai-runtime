@@ -1,0 +1,13 @@
+# SwiftFormat config for the Apple Foundation Models native module.
+# Conservative: enforce indentation/whitespace consistency without rewriting
+# the author's deliberate style choices (explicit self, #if layout, etc.).
+--swiftversion 5.9
+--indent 2
+--maxwidth 120
+--ifdef no-indent
+
+# Preserve author intent — these rules rewrite working, intentional code:
+--disable redundantSelf
+--disable redundantReturn
+--disable hoistPatternLet
+--disable wrapMultilineStatementBraces
