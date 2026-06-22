@@ -45,17 +45,17 @@ the user (enable Apple Intelligence, download the model, update the OS) or fall 
 
 ```ts
 export type ExpoAIUnavailableReason =
-  | "unsupported_os_version"
-  | "unsupported_device"
-  | "model_not_downloaded"
-  | "model_initializing"
-  | "apple_intelligence_disabled"
-  | "aicore_unavailable"
-  | "aicore_initializing"
-  | "unsupported_bootloader_state"
-  | "missing_dependency"
-  | "provider_not_configured"
-  | "unknown";
+  | 'unsupported_os_version'
+  | 'unsupported_device'
+  | 'model_not_downloaded'
+  | 'model_initializing'
+  | 'apple_intelligence_disabled'
+  | 'aicore_unavailable'
+  | 'aicore_initializing'
+  | 'unsupported_bootloader_state'
+  | 'missing_dependency'
+  | 'provider_not_configured'
+  | 'unknown';
 ```
 
 Use `ExpoAI.getCapabilities()` for the active provider, or `ExpoAI.listProviders()` to

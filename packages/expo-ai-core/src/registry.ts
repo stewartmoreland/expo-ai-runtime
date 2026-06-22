@@ -7,8 +7,8 @@
  * core unit-testable.
  */
 
-import type { ExpoAIAdapter } from "./adapter.js";
-import type { ExpoAIProvider } from "./types.js";
+import type { ExpoAIAdapter } from './adapter.js';
+import type { ExpoAIProvider } from './types.js';
 
 const adapters = new Map<ExpoAIProvider, ExpoAIAdapter>();
 

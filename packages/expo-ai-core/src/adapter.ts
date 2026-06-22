@@ -7,7 +7,7 @@
  * responsible for stamping provider + privacy metadata onto the public result.
  */
 
-import type { ExpoAIError } from "./errors.js";
+import type { ExpoAIError } from './errors.js';
 import type {
   CreateSessionOptions,
   ExpoAIAvailability,
@@ -17,7 +17,7 @@ import type {
   ExpoAIUsage,
   JSONSchema,
   LocalModelConfig,
-} from "./types.js";
+} from './types.js';
 
 /** A request after the router has stripped routing/fallback concerns. */
 export type NormalizedGenerateRequest = {

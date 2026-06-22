@@ -1,202 +1,218 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ExpoAI, clearAdapters, registerAdapter } from "../index.js";
-import { createMockAdapter } from "../testing.js";
+import { ExpoAI, clearAdapters, registerAdapter } from '../index.js';
+import { createMockAdapter } from '../testing.js';
 
 beforeEach(() => clearAdapters());
 
-describe("provider router — selection & priority", () => {
-  it("uses the highest-priority available provider", async () => {
-    registerAdapter(createMockAdapter({ provider: "apple-foundation-models", respondWith: "apple" }));
-    registerAdapter(createMockAdapter({ provider: "android-aicore-gemini-nano", respondWith: "android" }));
+describe('provider router — selection & priority', () => {
+  it('uses the highest-priority available provider', async () => {
+    registerAdapter(
+      createMockAdapter({ provider: 'apple-foundation-models', respondWith: 'apple' }),
+    );
+    registerAdapter(
+      createMockAdapter({ provider: 'android-aicore-gemini-nano', respondWith: 'android' }),
+    );
 
-    const result = await ExpoAI.generate({ prompt: "hi" });
+    const result = await ExpoAI.generate({ prompt: 'hi' });
 
-    expect(result.provider).toBe("apple-foundation-models");
-    expect(result.text).toBe("apple");
+    expect(result.provider).toBe('apple-foundation-models');
+    expect(result.text).toBe('apple');
     expect(result.usedFallback).toBe(false);
-    expect(result.privacy.privacyMode).toBe("on-device");
+    expect(result.privacy.privacyMode).toBe('on-device');
     expect(result.privacy.sendsPromptOffDevice).toBe(false);
   });
 
-  it("honors an explicitly requested provider", async () => {
-    registerAdapter(createMockAdapter({ provider: "apple-foundation-models", respondWith: "apple" }));
-    registerAdapter(createMockAdapter({ provider: "cloud", respondWith: "cloud" }));
+  it('honors an explicitly requested provider', async () => {
+    registerAdapter(
+      createMockAdapter({ provider: 'apple-foundation-models', respondWith: 'apple' }),
+    );
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'cloud' }));
 
-    const result = await ExpoAI.generate({ prompt: "hi", provider: "cloud" });
-    expect(result.provider).toBe("cloud");
-    expect(result.text).toBe("cloud");
+    const result = await ExpoAI.generate({ prompt: 'hi', provider: 'cloud' });
+    expect(result.provider).toBe('cloud');
+    expect(result.text).toBe('cloud');
   });
 
-  it("rejects an empty prompt with INVALID_PROMPT", async () => {
-    registerAdapter(createMockAdapter({ provider: "apple-foundation-models" }));
-    await expect(ExpoAI.generate({ prompt: "   " })).rejects.toMatchObject({ code: "INVALID_PROMPT" });
+  it('rejects an empty prompt with INVALID_PROMPT', async () => {
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models' }));
+    await expect(ExpoAI.generate({ prompt: '   ' })).rejects.toMatchObject({
+      code: 'INVALID_PROMPT',
+    });
   });
 
-  it("throws UNAVAILABLE(none) when no providers are registered", async () => {
-    await expect(ExpoAI.generate({ prompt: "hi" })).rejects.toMatchObject({
-      code: "UNAVAILABLE",
-      provider: "none",
+  it('throws UNAVAILABLE(none) when no providers are registered', async () => {
+    await expect(ExpoAI.generate({ prompt: 'hi' })).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      provider: 'none',
     });
   });
 });
 
-describe("provider router — fallback", () => {
-  it("falls back to cloud when the system provider is unavailable and fallback is cloud", async () => {
+describe('provider router — fallback', () => {
+  it('falls back to cloud when the system provider is unavailable and fallback is cloud', async () => {
     registerAdapter(
       createMockAdapter({
-        provider: "apple-foundation-models",
+        provider: 'apple-foundation-models',
         available: false,
-        reasonUnavailable: "apple_intelligence_disabled",
+        reasonUnavailable: 'apple_intelligence_disabled',
       }),
     );
-    registerAdapter(createMockAdapter({ provider: "cloud", respondWith: "cloud!" }));
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'cloud!' }));
 
-    const result = await ExpoAI.generate({ prompt: "hi", fallback: "cloud" });
+    const result = await ExpoAI.generate({ prompt: 'hi', fallback: 'cloud' });
 
-    expect(result.provider).toBe("cloud");
+    expect(result.provider).toBe('cloud');
     expect(result.usedFallback).toBe(true);
-    expect(result.privacy.privacyMode).toBe("third-party-cloud");
+    expect(result.privacy.privacyMode).toBe('third-party-cloud');
     expect(result.privacy.sendsPromptOffDevice).toBe(true);
   });
 
-  it("does not use cloud when fallback is none", async () => {
-    registerAdapter(createMockAdapter({ provider: "apple-foundation-models", available: false }));
-    registerAdapter(createMockAdapter({ provider: "cloud" }));
+  it('does not use cloud when fallback is none', async () => {
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models', available: false }));
+    registerAdapter(createMockAdapter({ provider: 'cloud' }));
 
-    await expect(ExpoAI.generate({ prompt: "hi", fallback: "none" })).rejects.toMatchObject({
-      code: "UNAVAILABLE",
+    await expect(ExpoAI.generate({ prompt: 'hi', fallback: 'none' })).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
     });
   });
 
-  it("retries the next candidate on a fallback-recommended error", async () => {
+  it('retries the next candidate on a fallback-recommended error', async () => {
     registerAdapter(
-      createMockAdapter({ provider: "apple-foundation-models", throwError: { code: "MODEL_NOT_READY" } }),
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        throwError: { code: 'MODEL_NOT_READY' },
+      }),
     );
-    registerAdapter(createMockAdapter({ provider: "cloud", respondWith: "rescued" }));
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'rescued' }));
 
-    const result = await ExpoAI.generate({ prompt: "hi", fallback: "cloud" });
+    const result = await ExpoAI.generate({ prompt: 'hi', fallback: 'cloud' });
 
-    expect(result.provider).toBe("cloud");
-    expect(result.text).toBe("rescued");
+    expect(result.provider).toBe('cloud');
+    expect(result.text).toBe('rescued');
     expect(result.usedFallback).toBe(true);
   });
 
-  it("does NOT fall back on a non-fallback error (safety)", async () => {
+  it('does NOT fall back on a non-fallback error (safety)', async () => {
     registerAdapter(
-      createMockAdapter({ provider: "apple-foundation-models", throwError: { code: "SAFETY_BLOCKED" } }),
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        throwError: { code: 'SAFETY_BLOCKED' },
+      }),
     );
-    registerAdapter(createMockAdapter({ provider: "cloud", respondWith: "should-not-be-used" }));
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'should-not-be-used' }));
 
-    await expect(ExpoAI.generate({ prompt: "hi", fallback: "cloud" })).rejects.toMatchObject({
-      code: "SAFETY_BLOCKED",
+    await expect(ExpoAI.generate({ prompt: 'hi', fallback: 'cloud' })).rejects.toMatchObject({
+      code: 'SAFETY_BLOCKED',
     });
   });
 });
 
-describe("provider router — privacy / sensitivity gating", () => {
+describe('provider router — privacy / sensitivity gating', () => {
   it("blocks a sensitive prompt from third-party cloud even when fallback is 'any'", async () => {
-    registerAdapter(createMockAdapter({ provider: "apple-foundation-models", available: false }));
-    registerAdapter(createMockAdapter({ provider: "cloud", respondWith: "leak" }));
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models', available: false }));
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'leak' }));
 
     await expect(
-      ExpoAI.generate({ prompt: "secret", sensitive: true, fallback: "any" }),
-    ).rejects.toMatchObject({ code: "UNAVAILABLE" });
+      ExpoAI.generate({ prompt: 'secret', sensitive: true, fallback: 'any' }),
+    ).rejects.toMatchObject({ code: 'UNAVAILABLE' });
   });
 
   it("allows a sensitive prompt to cloud only when fallback is explicitly 'cloud'", async () => {
-    registerAdapter(createMockAdapter({ provider: "apple-foundation-models", available: false }));
-    registerAdapter(createMockAdapter({ provider: "cloud", respondWith: "ok" }));
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models', available: false }));
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'ok' }));
 
-    const result = await ExpoAI.generate({ prompt: "secret", sensitive: true, fallback: "cloud" });
-    expect(result.provider).toBe("cloud");
+    const result = await ExpoAI.generate({ prompt: 'secret', sensitive: true, fallback: 'cloud' });
+    expect(result.provider).toBe('cloud');
   });
 
   it("allows a non-sensitive prompt to cloud with fallback 'any'", async () => {
-    registerAdapter(createMockAdapter({ provider: "apple-foundation-models", available: false }));
-    registerAdapter(createMockAdapter({ provider: "cloud", respondWith: "ok" }));
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models', available: false }));
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'ok' }));
 
-    const result = await ExpoAI.generate({ prompt: "weather?", fallback: "any" });
-    expect(result.provider).toBe("cloud");
+    const result = await ExpoAI.generate({ prompt: 'weather?', fallback: 'any' });
+    expect(result.provider).toBe('cloud');
   });
 });
 
-describe("provider router — usedFallback accuracy & task routing", () => {
-  it("reports usedFallback when the explicitly-requested provider is not registered", async () => {
-    registerAdapter(createMockAdapter({ provider: "android-aicore-gemini-nano", respondWith: "android" }));
+describe('provider router — usedFallback accuracy & task routing', () => {
+  it('reports usedFallback when the explicitly-requested provider is not registered', async () => {
+    registerAdapter(
+      createMockAdapter({ provider: 'android-aicore-gemini-nano', respondWith: 'android' }),
+    );
 
     const result = await ExpoAI.generate({
-      prompt: "hi",
-      provider: "apple-foundation-models",
-      fallback: "any",
+      prompt: 'hi',
+      provider: 'apple-foundation-models',
+      fallback: 'any',
     });
-    expect(result.provider).toBe("android-aicore-gemini-nano");
+    expect(result.provider).toBe('android-aicore-gemini-nano');
     expect(result.usedFallback).toBe(true);
   });
 
-  it("reports usedFallback=false when the requested provider serves the request", async () => {
-    registerAdapter(createMockAdapter({ provider: "cloud", respondWith: "c" }));
-    const result = await ExpoAI.generate({ prompt: "hi", provider: "cloud" });
+  it('reports usedFallback=false when the requested provider serves the request', async () => {
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'c' }));
+    const result = await ExpoAI.generate({ prompt: 'hi', provider: 'cloud' });
     expect(result.usedFallback).toBe(false);
   });
 
-  it("forwards the summarize length hint to a native summarize handler", async () => {
+  it('forwards the summarize length hint to a native summarize handler', async () => {
     let received: { text?: string; length?: string } = {};
     const adapter = {
-      provider: "apple-foundation-models",
+      provider: 'apple-foundation-models',
       async getAvailability() {
-        return { available: true, provider: "apple-foundation-models" };
+        return { available: true, provider: 'apple-foundation-models' };
       },
       async getCapabilities() {
-        return { available: true, provider: "apple-foundation-models" };
+        return { available: true, provider: 'apple-foundation-models' };
       },
       async generate() {
-        return { text: "generated" };
+        return { text: 'generated' };
       },
       async summarize(req: { text?: string; length?: string }) {
         received = req;
-        return { text: "summary" };
+        return { text: 'summary' };
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
     registerAdapter(adapter);
 
-    await ExpoAI.summarize({ text: "a long note to compress", length: "short" });
-    expect(received.text).toBe("a long note to compress");
-    expect(received.length).toBe("short");
+    await ExpoAI.summarize({ text: 'a long note to compress', length: 'short' });
+    expect(received.text).toBe('a long note to compress');
+    expect(received.length).toBe('short');
   });
 });
 
-describe("provider router — abort signal", () => {
-  it("rejects generate when the signal is already aborted", async () => {
-    registerAdapter(createMockAdapter({ provider: "cloud", respondWith: "x" }));
+describe('provider router — abort signal', () => {
+  it('rejects generate when the signal is already aborted', async () => {
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'x' }));
     const controller = new AbortController();
     controller.abort();
     await expect(
-      ExpoAI.generate({ prompt: "hi", provider: "cloud", signal: controller.signal }),
-    ).rejects.toMatchObject({ code: "CANCELLED" });
+      ExpoAI.generate({ prompt: 'hi', provider: 'cloud', signal: controller.signal }),
+    ).rejects.toMatchObject({ code: 'CANCELLED' });
   });
 
-  it("rejects generate when aborted mid-flight", async () => {
+  it('rejects generate when aborted mid-flight', async () => {
     const adapter = {
-      provider: "cloud",
+      provider: 'cloud',
       async getAvailability() {
-        return { available: true, provider: "cloud" };
+        return { available: true, provider: 'cloud' };
       },
       async getCapabilities() {
-        return { available: true, provider: "cloud" };
+        return { available: true, provider: 'cloud' };
       },
       async generate() {
         await new Promise((resolve) => setTimeout(resolve, 50));
-        return { text: "late" };
+        return { text: 'late' };
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
     registerAdapter(adapter);
 
     const controller = new AbortController();
-    const promise = ExpoAI.generate({ prompt: "hi", provider: "cloud", signal: controller.signal });
+    const promise = ExpoAI.generate({ prompt: 'hi', provider: 'cloud', signal: controller.signal });
     setTimeout(() => controller.abort(), 10);
-    await expect(promise).rejects.toMatchObject({ code: "CANCELLED" });
+    await expect(promise).rejects.toMatchObject({ code: 'CANCELLED' });
   });
 });

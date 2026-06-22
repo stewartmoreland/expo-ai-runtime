@@ -36,16 +36,16 @@ loop, long-term memory, and Genkit/LangChain bridges.
 
 ## Phases
 
-| Phase | Delivers |
-| --- | --- |
-| **1. System Provider MVP** | Core API, iOS + Android adapters, capability detection, generate, sessions, error normalization, privacy metadata |
-| **2. Cloud Fallback + Structured Output** | Cloud adapter, provider routing, `generateObject`, JSON validation + repair, provider metadata on every result |
-| **3. Streaming** | Native event streaming, AsyncIterable wrapper, cancellation, timeout handling |
-| **4. Task APIs** | `summarize`, `rewrite`, `proofread`, image input where available, provider-specific feature mapping |
-| **5. LiteRT-LM BYOM** | LiteRT-LM provider, model file manager, remote download, checksum verification, compatibility metadata |
-| **6. Local Context / RAG** | Local search abstraction, app-managed index, `generateWithContext` |
-| **7. Tools + Agent Loop** | Tool registry, native iOS tools where available, JS-emulated Android tools, tool-call validation, loop limits, permissions |
-| **8. Backend Framework Bridges** | Optional Genkit, LangChain, and Vercel AI SDK backend bridges |
+| Phase                                     | Delivers                                                                                                                   |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **1. System Provider MVP**                | Core API, iOS + Android adapters, capability detection, generate, sessions, error normalization, privacy metadata          |
+| **2. Cloud Fallback + Structured Output** | Cloud adapter, provider routing, `generateObject`, JSON validation + repair, provider metadata on every result             |
+| **3. Streaming**                          | Native event streaming, AsyncIterable wrapper, cancellation, timeout handling                                              |
+| **4. Task APIs**                          | `summarize`, `rewrite`, `proofread`, image input where available, provider-specific feature mapping                        |
+| **5. LiteRT-LM BYOM**                     | LiteRT-LM provider, model file manager, remote download, checksum verification, compatibility metadata                     |
+| **6. Local Context / RAG**                | Local search abstraction, app-managed index, `generateWithContext`                                                         |
+| **7. Tools + Agent Loop**                 | Tool registry, native iOS tools where available, JS-emulated Android tools, tool-call validation, loop limits, permissions |
+| **8. Backend Framework Bridges**          | Optional Genkit, LangChain, and Vercel AI SDK backend bridges                                                              |
 
 ## What v1 proves
 

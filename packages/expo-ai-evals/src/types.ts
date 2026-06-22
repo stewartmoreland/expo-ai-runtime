@@ -3,15 +3,9 @@ import type {
   ExpoAIFallback,
   ExpoAIProvider,
   JSONSchema,
-} from "@stewmore/expo-ai-core";
+} from '@stewmore/expo-ai-core';
 
-export type EvalKind =
-  | "generate"
-  | "object"
-  | "summarize"
-  | "rewrite"
-  | "proofread"
-  | "privacy";
+export type EvalKind = 'generate' | 'object' | 'summarize' | 'rewrite' | 'proofread' | 'privacy';
 
 export type EvalCase = {
   name: string;
@@ -20,7 +14,7 @@ export type EvalCase = {
   text?: string;
   schema?: JSONSchema;
   style?: string;
-  length?: "short" | "medium" | "long";
+  length?: 'short' | 'medium' | 'long';
   provider?: ExpoAIProvider;
   fallback?: ExpoAIFallback;
   sensitive?: boolean;

@@ -5,15 +5,15 @@
  * parsing is required here.
  */
 
-import type { GenerateBody, GenerateOutput } from "./mock.js";
+import type { GenerateBody, GenerateOutput } from './mock.js';
 
-export type Mode = "mock" | "openai" | "anthropic";
+export type Mode = 'mock' | 'openai' | 'anthropic';
 
 export function resolveMode(): Mode {
-  if (process.env.EXPO_AI_FORCE_MOCK === "1") return "mock";
-  if (process.env.OPENAI_API_KEY) return "openai";
-  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
-  return "mock";
+  if (process.env.EXPO_AI_FORCE_MOCK === '1') return 'mock';
+  if (process.env.OPENAI_API_KEY) return 'openai';
+  if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
+  return 'mock';
 }
 
 export class HttpError extends Error {
@@ -22,7 +22,7 @@ export class HttpError extends Error {
     message: string,
   ) {
     super(message);
-    this.name = "HttpError";
+    this.name = 'HttpError';
   }
 }
 
@@ -39,31 +39,31 @@ type OpenAIResponse = {
 };
 
 export async function openaiGenerate(body: GenerateBody): Promise<GenerateOutput> {
-  const base = process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
-  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+  const base = process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1';
+  const model = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
   const res = await fetch(`${base}/chat/completions`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model,
       messages: [
-        ...(body.instructions ? [{ role: "system", content: body.instructions }] : []),
-        { role: "user", content: userContent(body) },
+        ...(body.instructions ? [{ role: 'system', content: body.instructions }] : []),
+        { role: 'user', content: userContent(body) },
       ],
       ...(body.temperature !== undefined ? { temperature: body.temperature } : {}),
       ...(body.maxOutputTokens !== undefined ? { max_tokens: body.maxOutputTokens } : {}),
-      ...(body.schema ? { response_format: { type: "json_object" } } : {}),
+      ...(body.schema ? { response_format: { type: 'json_object' } } : {}),
     }),
   });
   if (!res.ok) throw new HttpError(res.status, await safeText(res));
   const data = (await res.json()) as OpenAIResponse;
-  const text = data.choices?.[0]?.message?.content ?? "";
+  const text = data.choices?.[0]?.message?.content ?? '';
   return {
     text,
-    finishReason: "stop",
+    finishReason: 'stop',
     usage: {
       inputTokens: data.usage?.prompt_tokens ?? 0,
       outputTokens: data.usage?.completion_tokens ?? 0,
@@ -77,31 +77,31 @@ type AnthropicResponse = {
 };
 
 export async function anthropicGenerate(body: GenerateBody): Promise<GenerateOutput> {
-  const model = process.env.ANTHROPIC_MODEL ?? "claude-3-5-haiku-latest";
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
+  const model = process.env.ANTHROPIC_MODEL ?? 'claude-3-5-haiku-latest';
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY ?? "",
-      "anthropic-version": "2023-06-01",
+      'content-type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY ?? '',
+      'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
       model,
       max_tokens: body.maxOutputTokens ?? 1024,
       ...(body.instructions ? { system: body.instructions } : {}),
-      messages: [{ role: "user", content: userContent(body) }],
+      messages: [{ role: 'user', content: userContent(body) }],
       ...(body.temperature !== undefined ? { temperature: body.temperature } : {}),
     }),
   });
   if (!res.ok) throw new HttpError(res.status, await safeText(res));
   const data = (await res.json()) as AnthropicResponse;
   const text = (data.content ?? [])
-    .filter((block) => block.type === "text")
-    .map((block) => block.text ?? "")
-    .join("");
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text ?? '')
+    .join('');
   return {
     text,
-    finishReason: "stop",
+    finishReason: 'stop',
     usage: {
       inputTokens: data.usage?.input_tokens ?? 0,
       outputTokens: data.usage?.output_tokens ?? 0,

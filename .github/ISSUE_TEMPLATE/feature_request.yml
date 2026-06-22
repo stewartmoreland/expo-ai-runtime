@@ -1,6 +1,6 @@
 name: ✨ Feature request
 description: Propose a new capability, provider, or API for the runtime
-labels: ["enhancement"]
+labels: ['enhancement']
 body:
   - type: markdown
     attributes:
@@ -49,9 +49,9 @@ body:
     attributes:
       label: Related roadmap phase (if known)
       options:
-        - "Phase A — DX & ergonomics"
-        - "Phase B — Breadth & platform currency"
-        - "Phase C — Adoption magnets"
+        - 'Phase A — DX & ergonomics'
+        - 'Phase B — Breadth & platform currency'
+        - 'Phase C — Adoption magnets'
         - Not sure / none
     validations:
       required: false

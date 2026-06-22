@@ -1,5 +1,5 @@
-import type { NativeStreamingModule } from "@stewmore/expo-ai-core";
-import { requireOptionalNativeModule } from "expo";
+import type { NativeStreamingModule } from '@stewmore/expo-ai-core';
+import { requireOptionalNativeModule } from 'expo';
 
 export interface ExpoAICoreNativeModule extends NativeStreamingModule {
   /** Trigger / await the on-device Gemini Nano model download. */
@@ -7,4 +7,4 @@ export interface ExpoAICoreNativeModule extends NativeStreamingModule {
 }
 
 /** The Android ML Kit GenAI native module, or null when not linked. */
-export const NativeAndroid = requireOptionalNativeModule<ExpoAICoreNativeModule>("ExpoAICore");
+export const NativeAndroid = requireOptionalNativeModule<ExpoAICoreNativeModule>('ExpoAICore');

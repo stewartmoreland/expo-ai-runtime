@@ -1,100 +1,100 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ExpoAI, clearAdapters, registerAdapter, type JSONSchema } from "../index.js";
-import { createMockAdapter } from "../testing.js";
+import { ExpoAI, clearAdapters, registerAdapter, type JSONSchema } from '../index.js';
+import { createMockAdapter } from '../testing.js';
 
 beforeEach(() => clearAdapters());
 
 const personSchema: JSONSchema = {
-  type: "object",
-  properties: { name: { type: "string" }, age: { type: "integer" } },
-  required: ["name", "age"],
+  type: 'object',
+  properties: { name: { type: 'string' }, age: { type: 'integer' } },
+  required: ['name', 'age'],
 };
 
-describe("sessions (emulated over a stateless adapter)", () => {
-  it("binds the session to the available provider", async () => {
-    registerAdapter(createMockAdapter({ provider: "apple-foundation-models", respondWith: "ok" }));
-    const session = await ExpoAI.createSession({ instructions: "be brief" });
-    expect(session.provider).toBe("apple-foundation-models");
-    expect(typeof session.id).toBe("string");
+describe('sessions (emulated over a stateless adapter)', () => {
+  it('binds the session to the available provider', async () => {
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models', respondWith: 'ok' }));
+    const session = await ExpoAI.createSession({ instructions: 'be brief' });
+    expect(session.provider).toBe('apple-foundation-models');
+    expect(typeof session.id).toBe('string');
   });
 
-  it("replays the transcript as context across turns", async () => {
+  it('replays the transcript as context across turns', async () => {
     const prompts: string[] = [];
     registerAdapter(
       createMockAdapter({
-        provider: "android-aicore-gemini-nano",
+        provider: 'android-aicore-gemini-nano',
         respondWith: (prompt) => {
           prompts.push(prompt);
-          return "reply";
+          return 'reply';
         },
       }),
     );
 
     const session = await ExpoAI.createSession();
-    await session.generate({ prompt: "first" });
-    await session.generate({ prompt: "second" });
+    await session.generate({ prompt: 'first' });
+    await session.generate({ prompt: 'second' });
 
-    expect(prompts[1]).toContain("first");
-    expect(prompts[1]).toContain("reply");
-    expect(prompts[1]).toContain("second");
+    expect(prompts[1]).toContain('first');
+    expect(prompts[1]).toContain('reply');
+    expect(prompts[1]).toContain('second');
   });
 
-  it("reset() clears the transcript", async () => {
+  it('reset() clears the transcript', async () => {
     const prompts: string[] = [];
     registerAdapter(
       createMockAdapter({
-        provider: "android-aicore-gemini-nano",
+        provider: 'android-aicore-gemini-nano',
         respondWith: (prompt) => {
           prompts.push(prompt);
-          return "r";
+          return 'r';
         },
       }),
     );
 
     const session = await ExpoAI.createSession();
-    await session.generate({ prompt: "first" });
+    await session.generate({ prompt: 'first' });
     await session.reset();
-    await session.generate({ prompt: "second" });
+    await session.generate({ prompt: 'second' });
 
-    expect(prompts[1]).not.toContain("first");
+    expect(prompts[1]).not.toContain('first');
   });
 
-  it("session.generateObject returns a validated object", async () => {
+  it('session.generateObject returns a validated object', async () => {
     registerAdapter(
       createMockAdapter({
-        provider: "android-aicore-gemini-nano",
+        provider: 'android-aicore-gemini-nano',
         respondWith: '{"name":"Ada","age":36}',
       }),
     );
     const session = await ExpoAI.createSession();
     const obj = await session.generateObject<{ name: string; age: number }>({
-      prompt: "extract",
+      prompt: 'extract',
       schema: personSchema,
     });
-    expect(obj).toEqual({ name: "Ada", age: 36 });
+    expect(obj).toEqual({ name: 'Ada', age: 36 });
   });
 
-  it("backfills session-level sampling onto native session turns (per-call overrides)", async () => {
+  it('backfills session-level sampling onto native session turns (per-call overrides)', async () => {
     const seen: Array<number | undefined> = [];
     const adapter = {
-      provider: "apple-foundation-models",
+      provider: 'apple-foundation-models',
       async getAvailability() {
-        return { available: true, provider: "apple-foundation-models" };
+        return { available: true, provider: 'apple-foundation-models' };
       },
       async getCapabilities() {
-        return { available: true, provider: "apple-foundation-models" };
+        return { available: true, provider: 'apple-foundation-models' };
       },
       async generate() {
-        return { text: "g" };
+        return { text: 'g' };
       },
       async createSession() {
         return {
-          id: "s1",
-          provider: "apple-foundation-models",
+          id: 's1',
+          provider: 'apple-foundation-models',
           async generate(req: { temperature?: number }) {
             seen.push(req.temperature);
-            return { text: "r" };
+            return { text: 'r' };
           },
           async reset() {},
           async dispose() {},
@@ -105,8 +105,8 @@ describe("sessions (emulated over a stateless adapter)", () => {
     registerAdapter(adapter);
 
     const session = await ExpoAI.createSession({ temperature: 0.2 });
-    await session.generate({ prompt: "hi" }); // inherits 0.2
-    await session.generate({ prompt: "hi", temperature: 0.9 }); // per-call override
+    await session.generate({ prompt: 'hi' }); // inherits 0.2
+    await session.generate({ prompt: 'hi', temperature: 0.9 }); // per-call override
     expect(seen).toEqual([0.2, 0.9]);
   });
 
@@ -114,12 +114,12 @@ describe("sessions (emulated over a stateless adapter)", () => {
     const sessionPrompts: string[] = [];
     const oneShotPrompts: string[] = [];
     const adapter = {
-      provider: "apple-foundation-models",
+      provider: 'apple-foundation-models',
       async getAvailability() {
-        return { available: true, provider: "apple-foundation-models" };
+        return { available: true, provider: 'apple-foundation-models' };
       },
       async getCapabilities() {
-        return { available: true, provider: "apple-foundation-models" };
+        return { available: true, provider: 'apple-foundation-models' };
       },
       // One-shot adapter generate returns schema-valid JSON.
       async generate(req: { prompt: string }) {
@@ -129,11 +129,11 @@ describe("sessions (emulated over a stateless adapter)", () => {
       // Native stateful session — no generateEphemeral / commitTurn (like Apple).
       async createSession() {
         return {
-          id: "s1",
-          provider: "apple-foundation-models",
+          id: 's1',
+          provider: 'apple-foundation-models',
           async generate(req: { prompt: string }) {
             sessionPrompts.push(req.prompt);
-            return { text: "session-reply" };
+            return { text: 'session-reply' };
           },
           async reset() {},
           async dispose() {},
@@ -144,15 +144,15 @@ describe("sessions (emulated over a stateless adapter)", () => {
     registerAdapter(adapter);
 
     const session = await ExpoAI.createSession();
-    const obj = await session.generateObject({ prompt: "extract person", schema: personSchema });
-    expect(obj).toEqual({ name: "Ada", age: 36 });
+    const obj = await session.generateObject({ prompt: 'extract person', schema: personSchema });
+    expect(obj).toEqual({ name: 'Ada', age: 36 });
 
     // generateObject ran off-session (no transcript turns), schema prompt went to the one-shot.
     expect(sessionPrompts).toEqual([]);
-    expect(oneShotPrompts[0]).toContain("JSON Schema");
+    expect(oneShotPrompts[0]).toContain('JSON Schema');
 
     // A subsequent real turn is the only thing in the transcript.
-    await session.generate({ prompt: "and their email?" });
-    expect(sessionPrompts).toEqual(["and their email?"]);
+    await session.generate({ prompt: 'and their email?' });
+    expect(sessionPrompts).toEqual(['and their email?']);
   });
 });

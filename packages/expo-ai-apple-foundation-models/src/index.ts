@@ -17,12 +17,12 @@ import {
   registerAdapter,
   type ExpoAIAdapter,
   type NativeCapabilityProfile,
-} from "@stewmore/expo-ai-core";
-import { Platform } from "react-native";
+} from '@stewmore/expo-ai-core';
+import { Platform } from 'react-native';
 
-import { NativeApple } from "./native.js";
+import { NativeApple } from './native.js';
 
-const PROVIDER = "apple-foundation-models" as const;
+const PROVIDER = 'apple-foundation-models' as const;
 
 const CAPABILITY_PROFILE: NativeCapabilityProfile = {
   isOnDevice: true,
@@ -44,13 +44,16 @@ const CAPABILITY_PROFILE: NativeCapabilityProfile = {
 };
 
 export const appleFoundationModelsAdapter: ExpoAIAdapter =
-  Platform.OS === "ios" && NativeApple
-    ? createNativeAdapter(NativeApple, { provider: PROVIDER, capabilityProfile: CAPABILITY_PROFILE })
+  Platform.OS === 'ios' && NativeApple
+    ? createNativeAdapter(NativeApple, {
+        provider: PROVIDER,
+        capabilityProfile: CAPABILITY_PROFILE,
+      })
     : createUnavailableNativeAdapter(
         PROVIDER,
-        Platform.OS === "ios" ? "missing_dependency" : "unsupported_device",
+        Platform.OS === 'ios' ? 'missing_dependency' : 'unsupported_device',
       );
 
 registerAdapter(appleFoundationModelsAdapter);
 
-export * from "./native.js";
+export * from './native.js';

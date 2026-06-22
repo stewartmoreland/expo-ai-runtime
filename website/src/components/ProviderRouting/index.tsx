@@ -1,5 +1,5 @@
-import type {ReactNode} from 'react';
-import Badge, {type BadgeTone} from '@site/src/components/Badge';
+import type { ReactNode } from 'react';
+import Badge, { type BadgeTone } from '@site/src/components/Badge';
 import styles from './styles.module.css';
 
 type Rung = {
@@ -53,7 +53,7 @@ const OFF_DEVICE: Rung[] = [
   },
 ];
 
-function RungRow({rung}: {rung: Rung}): ReactNode {
+function RungRow({ rung }: { rung: Rung }): ReactNode {
   return (
     <li className={styles.rung}>
       <div className={styles.rungMain}>

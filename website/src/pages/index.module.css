@@ -2,11 +2,7 @@
 
 .hero {
   background:
-    radial-gradient(
-      900px 500px at 85% -10%,
-      rgba(110, 168, 254, 0.12),
-      transparent 60%
-    ),
+    radial-gradient(900px 500px at 85% -10%, rgba(110, 168, 254, 0.12), transparent 60%),
     var(--eai-bg);
   border-bottom: 1px solid var(--eai-border);
   padding: 5rem 0 4rem;
@@ -62,7 +58,9 @@
   border-radius: var(--eai-radius);
   font-weight: 700;
   font-size: 0.98rem;
-  transition: transform 0.15s ease, background 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
 }
 
 .primaryBtn {

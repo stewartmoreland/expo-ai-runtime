@@ -1,6 +1,6 @@
-import type {ReactNode} from 'react';
+import type { ReactNode } from 'react';
 import Link from '@docusaurus/Link';
-import Badge, {type BadgeTone} from '@site/src/components/Badge';
+import Badge, { type BadgeTone } from '@site/src/components/Badge';
 import styles from './styles.module.css';
 
 type Pkg = {

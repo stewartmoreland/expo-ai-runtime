@@ -27,9 +27,9 @@ package on the wrong platform is a no-op — it registers an always-unavailable 
 rather than throwing.
 
 ```ts
-import { ExpoAI } from "@stewmore/expo-ai-core";
-import "@stewmore/expo-ai-apple-foundation-models"; // registers the iOS adapter
-import "@stewmore/expo-ai-android-aicore";          // registers the Android adapter
+import { ExpoAI } from '@stewmore/expo-ai-core';
+import '@stewmore/expo-ai-apple-foundation-models'; // registers the iOS adapter
+import '@stewmore/expo-ai-android-aicore'; // registers the Android adapter
 ```
 
 ## Development build required

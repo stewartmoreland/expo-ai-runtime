@@ -1,4 +1,4 @@
-import { ExpoAI, ExpoAIError, type GenerateResult } from "@stewmore/expo-ai-core";
+import { ExpoAI, ExpoAIError, type GenerateResult } from '@stewmore/expo-ai-core';
 import {
   Badge,
   Card,
@@ -6,14 +6,14 @@ import {
   PromptInput,
   ProviderPrivacy,
   Screen,
-} from "@stewmore/example-shared";
-import { useEffect, useRef, useState } from "react";
-import { Text } from "react-native";
+} from '@stewmore/example-shared';
+import { useEffect, useRef, useState } from 'react';
+import { Text } from 'react-native';
 
 export default function App() {
-  const [prompt, setPrompt] = useState("Write a short poem about on-device AI.");
+  const [prompt, setPrompt] = useState('Write a short poem about on-device AI.');
   const [streaming, setStreaming] = useState(false);
-  const [text, setText] = useState("");
+  const [text, setText] = useState('');
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [error, setError] = useState<ExpoAIError | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
@@ -23,20 +23,24 @@ export default function App() {
 
   async function onStream() {
     setStreaming(true);
-    setText("");
+    setText('');
     setResult(null);
     setError(null);
     const controller = new AbortController();
     controllerRef.current = controller;
     try {
-      for await (const chunk of ExpoAI.stream({ prompt, fallback: "cloud", signal: controller.signal })) {
-        if (chunk.type === "delta") setText((current) => current + chunk.text);
-        else if (chunk.type === "done") setResult(chunk.result);
+      for await (const chunk of ExpoAI.stream({
+        prompt,
+        fallback: 'cloud',
+        signal: controller.signal,
+      })) {
+        if (chunk.type === 'delta') setText((current) => current + chunk.text);
+        else if (chunk.type === 'done') setResult(chunk.result);
       }
     } catch (caught) {
-      const caughtError = ExpoAIError.from(caught, "none");
+      const caughtError = ExpoAIError.from(caught, 'none');
       // Stopping the stream is intentional, not an error to surface.
-      if (caughtError.code !== "CANCELLED") setError(caughtError);
+      if (caughtError.code !== 'CANCELLED') setError(caughtError);
     } finally {
       setStreaming(false);
       controllerRef.current = null;
@@ -57,7 +61,7 @@ export default function App() {
       {text.length > 0 || streaming ? (
         <Card title="Output">
           {streaming ? <Badge label="streaming…" tone="info" /> : null}
-          <Text style={{ color: "#eef2ff", fontSize: 15, lineHeight: 22 }}>{text}</Text>
+          <Text style={{ color: '#eef2ff', fontSize: 15, lineHeight: 22 }}>{text}</Text>
           {result ? <ProviderPrivacy provider={result.provider} privacy={result.privacy} /> : null}
         </Card>
       ) : null}
@@ -65,7 +69,7 @@ export default function App() {
       {error ? (
         <Card title="Error">
           <Badge label={error.code} tone="danger" />
-          <Text style={{ color: "#f87171" }}>{error.message}</Text>
+          <Text style={{ color: '#f87171' }}>{error.message}</Text>
         </Card>
       ) : null}
     </Screen>

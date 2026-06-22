@@ -184,11 +184,11 @@ export class ExpoAIError extends Error {
     // (undocumented)
     readonly retryable: boolean;
     // (undocumented)
-    toJSON(): Required<Omit<ExpoAIErrorParams, "cause">>;
+    toJSON(): Required<Omit<ExpoAIErrorParams, 'cause'>>;
 }
 
 // @public (undocumented)
-export type ExpoAIErrorCode = "UNAVAILABLE" | "UNSUPPORTED_DEVICE" | "MODEL_NOT_READY" | "MODEL_DOWNLOAD_REQUIRED" | "USER_SETTING_REQUIRED" | "INVALID_PROMPT" | "CONTEXT_WINDOW_EXCEEDED" | "SAFETY_BLOCKED" | "RATE_LIMITED" | "CANCELLED" | "TIMEOUT" | "NATIVE_PROVIDER_ERROR" | "UNKNOWN";
+export type ExpoAIErrorCode = 'UNAVAILABLE' | 'UNSUPPORTED_DEVICE' | 'MODEL_NOT_READY' | 'MODEL_DOWNLOAD_REQUIRED' | 'USER_SETTING_REQUIRED' | 'INVALID_PROMPT' | 'CONTEXT_WINDOW_EXCEEDED' | 'SAFETY_BLOCKED' | 'RATE_LIMITED' | 'CANCELLED' | 'TIMEOUT' | 'NATIVE_PROVIDER_ERROR' | 'UNKNOWN';
 
 // @public (undocumented)
 export type ExpoAIErrorParams = {
@@ -212,10 +212,10 @@ export type ExpoAIErrorPayload = {
 };
 
 // @public
-export type ExpoAIFallback = "none" | "cloud" | "any";
+export type ExpoAIFallback = 'none' | 'cloud' | 'any';
 
 // @public
-export type ExpoAIFinishReason = "stop" | "length" | "cancelled" | "safety" | "tool_calls" | "unknown";
+export type ExpoAIFinishReason = 'stop' | 'length' | 'cancelled' | 'safety' | 'tool_calls' | 'unknown';
 
 // @public (undocumented)
 export type ExpoAINamespace = typeof ExpoAI;
@@ -229,10 +229,10 @@ export type ExpoAIPrivacyInfo = {
 };
 
 // @public
-export type ExpoAIPrivacyMode = "on-device" | "apple-private-cloud-compute" | "third-party-cloud" | "unknown";
+export type ExpoAIPrivacyMode = 'on-device' | 'apple-private-cloud-compute' | 'third-party-cloud' | 'unknown';
 
 // @public
-export type ExpoAIProvider = "system-preferred" | "apple-foundation-models" | "apple-private-cloud-compute" | "android-aicore-gemini-nano" | "litert-lm" | "cloud" | "none";
+export type ExpoAIProvider = 'system-preferred' | 'apple-foundation-models' | 'apple-private-cloud-compute' | 'android-aicore-gemini-nano' | 'litert-lm' | 'cloud' | 'none';
 
 // @public
 export type ExpoAIProviderInfo = {
@@ -259,7 +259,7 @@ export interface ExpoAISession {
 }
 
 // @public
-export type ExpoAIUnavailableReason = "unsupported_os_version" | "unsupported_device" | "model_not_downloaded" | "model_initializing" | "apple_intelligence_disabled" | "aicore_unavailable" | "aicore_initializing" | "unsupported_bootloader_state" | "missing_dependency" | "provider_not_configured" | "unknown";
+export type ExpoAIUnavailableReason = 'unsupported_os_version' | 'unsupported_device' | 'model_not_downloaded' | 'model_initializing' | 'apple_intelligence_disabled' | 'aicore_unavailable' | 'aicore_initializing' | 'unsupported_bootloader_state' | 'missing_dependency' | 'provider_not_configured' | 'unknown';
 
 // @public
 export type ExpoAIUsage = {
@@ -276,14 +276,14 @@ export function finalizeResult(result: AdapterGenerateResult, provider: ExpoAIPr
 
 // @public
 export type GenerateChunk = {
-    type: "start";
+    type: 'start';
     provider: ExpoAIProvider;
     privacy: ExpoAIPrivacyInfo;
 } | {
-    type: "delta";
+    type: 'delta';
     text: string;
 } | {
-    type: "done";
+    type: 'done';
     result: GenerateResult;
 };
 
@@ -384,7 +384,7 @@ export interface JSONSchema {
 }
 
 // @public
-export type JSONSchemaType = "object" | "array" | "string" | "number" | "integer" | "boolean" | "null";
+export type JSONSchemaType = 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null';
 
 // @public
 export function listProviders(): Promise<ExpoAIProviderInfo[]>;
@@ -392,8 +392,8 @@ export function listProviders(): Promise<ExpoAIProviderInfo[]>;
 // @public
 export type LocalModelConfig = {
     id: string;
-    runtime: "litert-lm";
-    source: "bundled" | "remote" | "huggingface" | "file";
+    runtime: 'litert-lm';
+    source: 'bundled' | 'remote' | 'huggingface' | 'file';
     uri?: string;
     checksum?: string;
     sizeBytes?: number;
@@ -414,7 +414,7 @@ export type NativeAvailability = {
 };
 
 // @public
-export type NativeCapabilityProfile = Omit<ExpoAICapabilities, "available" | "provider" | "reasonUnavailable">;
+export type NativeCapabilityProfile = Omit<ExpoAICapabilities, 'available' | 'provider' | 'reasonUnavailable'>;
 
 // @public (undocumented)
 export type NativeGenerateResult = {
@@ -430,7 +430,7 @@ export type NativeGenerateResult = {
 // @public (undocumented)
 export type NativeStreamEvent = {
     requestId: string;
-    type: "start" | "token" | "done" | "error";
+    type: 'start' | 'token' | 'done' | 'error';
     text?: string;
     result?: NativeGenerateResult;
     error?: Record<string, unknown>;
@@ -439,7 +439,7 @@ export type NativeStreamEvent = {
 // @public
 export interface NativeStreamingModule {
     // (undocumented)
-    addListener(eventName: "onExpoAIStream", listener: (event: NativeStreamEvent) => void): NativeSubscription;
+    addListener(eventName: 'onExpoAIStream', listener: (event: NativeStreamEvent) => void): NativeSubscription;
     // (undocumented)
     cancelStreaming(requestId: string): Promise<void>;
     // (undocumented)
@@ -529,7 +529,7 @@ export type RewriteOptions = {
 };
 
 // @public (undocumented)
-export type RewriteStyle = "rephrase" | "shorten" | "elaborate" | "friendly" | "professional" | "emojify";
+export type RewriteStyle = 'rephrase' | 'shorten' | 'elaborate' | 'friendly' | 'professional' | 'emojify';
 
 // @public (undocumented)
 export function routeGenerate(options: GenerateOptions): Promise<GenerateResult>;
@@ -593,7 +593,7 @@ export type StreamHandle = {
 // @public (undocumented)
 export type SummarizeOptions = {
     text: string;
-    length?: "short" | "medium" | "long";
+    length?: 'short' | 'medium' | 'long';
     provider?: ExpoAIProvider;
     fallback?: ExpoAIFallback;
     sensitive?: boolean;

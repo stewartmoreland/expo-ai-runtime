@@ -15,9 +15,9 @@ import type {
   ExpoAIAdapter,
   NormalizedGenerateRequest,
   StreamHandle,
-} from "./adapter.js";
-import { unavailableCapabilities } from "./capability-registry.js";
-import { ExpoAIError } from "./errors.js";
+} from './adapter.js';
+import { unavailableCapabilities } from './capability-registry.js';
+import { ExpoAIError } from './errors.js';
 import type {
   CreateSessionOptions,
   ExpoAIAvailability,
@@ -25,7 +25,7 @@ import type {
   ExpoAIFinishReason,
   ExpoAIProvider,
   ExpoAIUnavailableReason,
-} from "./types.js";
+} from './types.js';
 
 /* --------------------------- native module shape --------------------------- */
 
@@ -43,7 +43,7 @@ export type NativeGenerateResult = {
 
 export type NativeStreamEvent = {
   requestId: string;
-  type: "start" | "token" | "done" | "error";
+  type: 'start' | 'token' | 'done' | 'error';
   text?: string;
   result?: NativeGenerateResult;
   error?: Record<string, unknown>;
@@ -55,7 +55,9 @@ export type NativeSubscription = { remove: () => void };
 export interface NativeStreamingModule {
   getAvailability(): Promise<NativeAvailability>;
   generate(options: Record<string, unknown>): Promise<NativeGenerateResult>;
-  createSession?(options: Record<string, unknown>): Promise<{ sessionId: string; provider?: string }>;
+  createSession?(
+    options: Record<string, unknown>,
+  ): Promise<{ sessionId: string; provider?: string }>;
   generateInSession?(
     sessionId: string,
     options: Record<string, unknown>,
@@ -65,7 +67,7 @@ export interface NativeStreamingModule {
   startStreaming(requestId: string, options: Record<string, unknown>): Promise<void>;
   cancelStreaming(requestId: string): Promise<void>;
   addListener(
-    eventName: "onExpoAIStream",
+    eventName: 'onExpoAIStream',
     listener: (event: NativeStreamEvent) => void,
   ): NativeSubscription;
 }
@@ -73,7 +75,7 @@ export interface NativeStreamingModule {
 /** The static capability flags for an *available* provider. */
 export type NativeCapabilityProfile = Omit<
   ExpoAICapabilities,
-  "available" | "provider" | "reasonUnavailable"
+  'available' | 'provider' | 'reasonUnavailable'
 >;
 
 export type NativeAdapterOptions = {
@@ -128,27 +130,27 @@ function bridgeNativeStream(
 ): StreamHandle {
   const requestId = newRequestId(provider);
   let settled = false;
-  let accumulated = "";
+  let accumulated = '';
 
-  const subscription = native.addListener("onExpoAIStream", (event) => {
+  const subscription = native.addListener('onExpoAIStream', (event) => {
     if (settled || event.requestId !== requestId) return;
     switch (event.type) {
-      case "start":
+      case 'start':
         handlers.onStart?.();
         break;
-      case "token":
+      case 'token':
         // Suppress empty tokens (the Android native path can emit "").
-        if (typeof event.text === "string" && event.text.length > 0) {
+        if (typeof event.text === 'string' && event.text.length > 0) {
           accumulated += event.text;
           handlers.onDelta(event.text);
         }
         break;
-      case "done":
+      case 'done':
         settled = true;
         subscription.remove();
         handlers.onDone(resolveDoneResult(event.result, accumulated));
         break;
-      case "error":
+      case 'error':
         settled = true;
         subscription.remove();
         handlers.onError(ExpoAIError.from(event.error, provider));
@@ -238,7 +240,7 @@ export function createNativeAdapter(
     } catch {
       // A failed availability probe means the provider is unusable, not an error
       // to throw at the caller.
-      return { available: false, provider, reasonUnavailable: "unknown" };
+      return { available: false, provider, reasonUnavailable: 'unknown' };
     }
   }
 
@@ -248,7 +250,7 @@ export function createNativeAdapter(
     async getCapabilities() {
       const availability = await getAvailability();
       if (!availability.available) {
-        return unavailableCapabilities(provider, availability.reasonUnavailable ?? "unknown");
+        return unavailableCapabilities(provider, availability.reasonUnavailable ?? 'unknown');
       }
       return { available: true, provider, ...capabilityProfile };
     },
@@ -287,7 +289,7 @@ export function createUnavailableNativeAdapter(
     },
     async generate() {
       throw new ExpoAIError({
-        code: "UNAVAILABLE",
+        code: 'UNAVAILABLE',
         provider,
         message: `${provider} is unavailable (${reason}).`,
       });

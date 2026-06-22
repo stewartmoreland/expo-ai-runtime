@@ -6,32 +6,32 @@ tags:
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "title-basic-generate"
+    id: 'title-basic-generate'
 - assertVisible:
-    id: "card-capability"
+    id: 'card-capability'
 # Capability KeyValue labels are static copy regardless of provider state.
-- assertVisible: "On-device"
-- assertVisible: "Streaming"
-- assertVisible: "Structured output"
-- assertVisible: "Context window"
+- assertVisible: 'On-device'
+- assertVisible: 'Streaming'
+- assertVisible: 'Structured output'
+- assertVisible: 'Context window'
 # The capability value nodes render (yes/no/unknown).
 - assertVisible:
-    id: "kv-on-device"
+    id: 'kv-on-device'
 - assertVisible:
-    id: "kv-context-window"
+    id: 'kv-context-window'
 # Re-check is present and tappable; tapping must not crash the screen.
 - assertVisible:
-    id: "button-re-check"
+    id: 'button-re-check'
 - tapOn:
-    id: "button-re-check"
+    id: 'button-re-check'
 - assertVisible:
-    id: "card-capability"
+    id: 'card-capability'
 # Prompt card + input + Generate button exist (no network call here).
 - assertVisible:
-    id: "card-prompt"
+    id: 'card-prompt'
 - tapOn:
-    id: "prompt-input"
-- inputText: "Hello from Maestro"
+    id: 'prompt-input'
+- inputText: 'Hello from Maestro'
 - hideKeyboard
 - assertVisible:
-    id: "button-generate"
+    id: 'button-generate'

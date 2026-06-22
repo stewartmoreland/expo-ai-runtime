@@ -1,5 +1,5 @@
-import {themes as prismThemes} from 'prism-react-renderer';
-import type {Config} from '@docusaurus/types';
+import { themes as prismThemes } from 'prism-react-renderer';
+import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
@@ -44,7 +44,7 @@ const config: Config = {
     [
       require.resolve('@easyops-cn/docusaurus-search-local'),
       /** @type {import('@easyops-cn/docusaurus-search-local').PluginOptions} */
-      ({
+      {
         hashed: true,
         indexDocs: true,
         indexBlog: true,
@@ -56,7 +56,7 @@ const config: Config = {
         highlightSearchTermsOnTargetPage: true,
         explicitSearchResultPath: true,
         searchResultLimits: 8,
-      }),
+      },
     ],
   ],
 
@@ -118,7 +118,7 @@ const config: Config = {
           position: 'left',
           label: 'Docs',
         },
-        {to: '/changelog', label: 'Changelog', position: 'left'},
+        { to: '/changelog', label: 'Changelog', position: 'left' },
         {
           href: GITHUB_REPO,
           label: 'GitHub',
@@ -132,26 +132,26 @@ const config: Config = {
         {
           title: 'Docs',
           items: [
-            {label: 'Introduction', to: '/docs/intro'},
-            {label: 'Installation', to: '/docs/getting-started/installation'},
-            {label: 'Quick start', to: '/docs/getting-started/quick-start'},
+            { label: 'Introduction', to: '/docs/intro' },
+            { label: 'Installation', to: '/docs/getting-started/installation' },
+            { label: 'Quick start', to: '/docs/getting-started/quick-start' },
           ],
         },
         {
           title: 'Packages',
           items: [
-            {label: 'expo-ai-core', to: '/docs/packages/core'},
-            {label: 'Apple Foundation Models', to: '/docs/packages/apple-foundation-models'},
-            {label: 'Android AICore', to: '/docs/packages/android-aicore'},
-            {label: 'Cloud fallback', to: '/docs/packages/cloud'},
+            { label: 'expo-ai-core', to: '/docs/packages/core' },
+            { label: 'Apple Foundation Models', to: '/docs/packages/apple-foundation-models' },
+            { label: 'Android AICore', to: '/docs/packages/android-aicore' },
+            { label: 'Cloud fallback', to: '/docs/packages/cloud' },
           ],
         },
         {
           title: 'More',
           items: [
-            {label: 'Changelog', to: '/changelog'},
-            {label: 'GitHub', href: GITHUB_REPO},
-            {label: 'npm', href: 'https://www.npmjs.com/package/@stewmore/expo-ai-core'},
+            { label: 'Changelog', to: '/changelog' },
+            { label: 'GitHub', href: GITHUB_REPO },
+            { label: 'npm', href: 'https://www.npmjs.com/package/@stewmore/expo-ai-core' },
           ],
         },
       ],
@@ -166,7 +166,7 @@ const config: Config = {
     // the app's status cards (--eai-card on --eai-border), edges in a calm
     // steel-blue derived from the accent. Dark-only, so light === dark.
     mermaid: {
-      theme: {light: 'base', dark: 'base'},
+      theme: { light: 'base', dark: 'base' },
       options: {
         fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
         themeVariables: {

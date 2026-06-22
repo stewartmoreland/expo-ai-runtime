@@ -7,39 +7,39 @@
  * JSON which is validated and, on failure, re-prompted with the errors.
  */
 
-import { ExpoAIError } from "./errors.js";
-import type { ExpoAIProvider, JSONSchema, JSONSchemaType } from "./types.js";
+import { ExpoAIError } from './errors.js';
+import type { ExpoAIProvider, JSONSchema, JSONSchemaType } from './types.js';
 
 export type ValidationResult = { valid: boolean; errors: string[] };
 
 /** Validate a parsed value against the supported JSON Schema subset. */
 export function validateAgainstSchema(value: unknown, schema: JSONSchema): ValidationResult {
   const errors: string[] = [];
-  validateNode(value, schema, "$", errors);
+  validateNode(value, schema, '$', errors);
   return { valid: errors.length === 0, errors };
 }
 
-function typeOf(value: unknown): JSONSchemaType | "undefined" {
-  if (value === null) return "null";
-  if (Array.isArray(value)) return "array";
+function typeOf(value: unknown): JSONSchemaType | 'undefined' {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
   switch (typeof value) {
-    case "string":
-      return "string";
-    case "boolean":
-      return "boolean";
-    case "number":
-      return Number.isInteger(value) ? "integer" : "number";
-    case "object":
-      return "object";
+    case 'string':
+      return 'string';
+    case 'boolean':
+      return 'boolean';
+    case 'number':
+      return Number.isInteger(value) ? 'integer' : 'number';
+    case 'object':
+      return 'object';
     default:
-      return "undefined";
+      return 'undefined';
   }
 }
 
-function matchesType(actual: JSONSchemaType | "undefined", expected: JSONSchemaType): boolean {
+function matchesType(actual: JSONSchemaType | 'undefined', expected: JSONSchemaType): boolean {
   if (actual === expected) return true;
   // an integer satisfies "number"
-  if (expected === "number" && actual === "integer") return true;
+  if (expected === 'number' && actual === 'integer') return true;
   return false;
 }
 
@@ -56,26 +56,28 @@ function validateNode(value: unknown, schema: JSONSchema, path: string, errors: 
     const actual = typeOf(value);
     const ok = expectedTypes.some((t) => matchesType(actual, t));
     if (!ok) {
-      errors.push(`${path}: expected type ${expectedTypes.join(" | ")} but got ${actual}`);
+      errors.push(`${path}: expected type ${expectedTypes.join(' | ')} but got ${actual}`);
       return; // further checks assume the type matched
     }
 
-    if (expectedTypes.includes("object") && actual === "object") {
+    if (expectedTypes.includes('object') && actual === 'object') {
       validateObject(value as Record<string, unknown>, schema, path, errors);
     }
-    if (expectedTypes.includes("array") && actual === "array") {
+    if (expectedTypes.includes('array') && actual === 'array') {
       validateArray(value as unknown[], schema, path, errors);
     }
-    if ((expectedTypes.includes("number") || expectedTypes.includes("integer")) &&
-      (actual === "number" || actual === "integer")) {
+    if (
+      (expectedTypes.includes('number') || expectedTypes.includes('integer')) &&
+      (actual === 'number' || actual === 'integer')
+    ) {
       validateNumber(value as number, schema, path, errors);
     }
-    if (expectedTypes.includes("string") && actual === "string") {
+    if (expectedTypes.includes('string') && actual === 'string') {
       validateString(value as string, schema, path, errors);
     }
   } else if (schema.properties || schema.required) {
     // No explicit type, but object-shaped keywords present: require an object.
-    if (typeOf(value) === "object") {
+    if (typeOf(value) === 'object') {
       validateObject(value as Record<string, unknown>, schema, path, errors);
     } else {
       errors.push(`${path}: expected type object but got ${typeOf(value)}`);
@@ -140,7 +142,7 @@ function validateString(value: string, schema: JSONSchema, path: string, errors:
 function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (typeof a !== typeof b) return false;
-  if (a && b && typeof a === "object") {
+  if (a && b && typeof a === 'object') {
     if (Array.isArray(a) !== Array.isArray(b)) return false;
     const aKeys = Object.keys(a as object);
     const bKeys = Object.keys(b as object);
@@ -159,7 +161,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 /** Find the matching close index for the bracket at `start` (string-aware). */
 function matchBalanced(text: string, start: number): number {
   const open = text[start];
-  const close = open === "{" ? "}" : "]";
+  const close = open === '{' ? '}' : ']';
   let depth = 0;
   let inString = false;
   let escaped = false;
@@ -167,7 +169,7 @@ function matchBalanced(text: string, start: number): number {
     const char = text[i];
     if (inString) {
       if (escaped) escaped = false;
-      else if (char === "\\") escaped = true;
+      else if (char === '\\') escaped = true;
       else if (char === '"') inString = false;
       continue;
     }
@@ -191,7 +193,7 @@ function balancedSpans(text: string): string[] {
     const char = text[i];
     if (inString) {
       if (escaped) escaped = false;
-      else if (char === "\\") escaped = true;
+      else if (char === '\\') escaped = true;
       else if (char === '"') inString = false;
       i += 1;
       continue;
@@ -201,7 +203,7 @@ function balancedSpans(text: string): string[] {
       i += 1;
       continue;
     }
-    if (char === "{" || char === "[") {
+    if (char === '{' || char === '[') {
       const end = matchBalanced(text, i);
       if (end !== -1) {
         spans.push(text.slice(i, end + 1));
@@ -246,9 +248,7 @@ export function extractJson(text: string): string | null {
   return candidates[0] ?? null;
 }
 
-export type ParseResult =
-  | { ok: true; value: unknown }
-  | { ok: false; error: string };
+export type ParseResult = { ok: true; value: unknown } | { ok: false; error: string };
 
 export function parseJson(text: string): ParseResult {
   try {
@@ -262,17 +262,21 @@ export function parseJson(text: string): ParseResult {
 /* Prompt construction                                                */
 /* ------------------------------------------------------------------ */
 
-export function buildSchemaPrompt(basePrompt: string, schema: JSONSchema, schemaName?: string): string {
-  const name = schemaName ? ` named "${schemaName}"` : "";
+export function buildSchemaPrompt(
+  basePrompt: string,
+  schema: JSONSchema,
+  schemaName?: string,
+): string {
+  const name = schemaName ? ` named "${schemaName}"` : '';
   return [
     `${basePrompt}`,
-    "",
+    '',
     `Respond with ONLY a single JSON value${name} that conforms to this JSON Schema.`,
-    "Do not include any explanation, comments, or Markdown code fences.",
-    "",
-    "JSON Schema:",
+    'Do not include any explanation, comments, or Markdown code fences.',
+    '',
+    'JSON Schema:',
     JSON.stringify(schema, null, 2),
-  ].join("\n");
+  ].join('\n');
 }
 
 export function buildRepairPrompt(
@@ -284,16 +288,16 @@ export function buildRepairPrompt(
 ): string {
   return [
     buildSchemaPrompt(basePrompt, schema, schemaName),
-    "",
-    "Your previous response did not satisfy the schema.",
-    "Previous response:",
+    '',
+    'Your previous response did not satisfy the schema.',
+    'Previous response:',
     previousOutput,
-    "",
-    "Validation errors:",
+    '',
+    'Validation errors:',
     ...errors.map((error) => `- ${error}`),
-    "",
-    "Return a corrected JSON value that fixes every error above.",
-  ].join("\n");
+    '',
+    'Return a corrected JSON value that fixes every error above.',
+  ].join('\n');
 }
 
 /* ------------------------------------------------------------------ */
@@ -324,7 +328,7 @@ export async function generateValidatedObject(
 ): Promise<ValidatedObjectResult> {
   const maxRepair = options.maxRepairAttempts ?? 2;
   let lastErrors: string[] = [];
-  let lastText = "";
+  let lastText = '';
   let attempts = 0;
 
   for (let attempt = 0; attempt <= maxRepair; attempt++) {
@@ -338,7 +342,13 @@ export async function generateValidatedObject(
       );
     } else {
       text = await options.generateText(
-        buildRepairPrompt(options.basePrompt, options.schema, lastText, lastErrors, options.schemaName),
+        buildRepairPrompt(
+          options.basePrompt,
+          options.schema,
+          lastText,
+          lastErrors,
+          options.schemaName,
+        ),
       );
     }
     lastText = text;
@@ -356,13 +366,13 @@ export async function generateValidatedObject(
       }
       if (firstParseErrors === null) firstParseErrors = validation.errors;
     }
-    lastErrors = firstParseErrors ?? ["response did not contain valid JSON matching the schema"];
+    lastErrors = firstParseErrors ?? ['response did not contain valid JSON matching the schema'];
   }
 
   throw new ExpoAIError({
-    code: "NATIVE_PROVIDER_ERROR",
+    code: 'NATIVE_PROVIDER_ERROR',
     provider: options.provider,
-    message: `Could not produce output matching the schema after ${attempts} attempt(s): ${lastErrors.join("; ")}`,
+    message: `Could not produce output matching the schema after ${attempts} attempt(s): ${lastErrors.join('; ')}`,
     retryable: false,
     fallbackRecommended: true,
   });

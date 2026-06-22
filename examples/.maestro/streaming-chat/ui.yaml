@@ -6,13 +6,13 @@ tags:
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "title-streaming-chat"
+    id: 'title-streaming-chat'
 - assertVisible:
-    id: "card-prompt"
+    id: 'card-prompt'
 - tapOn:
-    id: "prompt-input"
-- inputText: "Hello from Maestro"
+    id: 'prompt-input'
+- inputText: 'Hello from Maestro'
 - hideKeyboard
 # Before streaming, the button reads "Stream" (id button-stream).
 - assertVisible:
-    id: "button-stream"
+    id: 'button-stream'

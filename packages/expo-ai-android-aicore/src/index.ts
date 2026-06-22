@@ -18,12 +18,12 @@ import {
   registerAdapter,
   type ExpoAIAdapter,
   type NativeCapabilityProfile,
-} from "@stewmore/expo-ai-core";
-import { Platform } from "react-native";
+} from '@stewmore/expo-ai-core';
+import { Platform } from 'react-native';
 
-import { NativeAndroid } from "./native.js";
+import { NativeAndroid } from './native.js';
 
-const PROVIDER = "android-aicore-gemini-nano" as const;
+const PROVIDER = 'android-aicore-gemini-nano' as const;
 
 const CAPABILITY_PROFILE: NativeCapabilityProfile = {
   isOnDevice: true,
@@ -46,11 +46,14 @@ const CAPABILITY_PROFILE: NativeCapabilityProfile = {
 };
 
 export const androidAICoreAdapter: ExpoAIAdapter =
-  Platform.OS === "android" && NativeAndroid
-    ? createNativeAdapter(NativeAndroid, { provider: PROVIDER, capabilityProfile: CAPABILITY_PROFILE })
+  Platform.OS === 'android' && NativeAndroid
+    ? createNativeAdapter(NativeAndroid, {
+        provider: PROVIDER,
+        capabilityProfile: CAPABILITY_PROFILE,
+      })
     : createUnavailableNativeAdapter(
         PROVIDER,
-        Platform.OS === "android" ? "missing_dependency" : "unsupported_device",
+        Platform.OS === 'android' ? 'missing_dependency' : 'unsupported_device',
       );
 
 registerAdapter(androidAICoreAdapter);
@@ -61,11 +64,11 @@ registerAdapter(androidAICoreAdapter);
  * Android.
  */
 export async function downloadGeminiNanoModel(): Promise<void> {
-  if (Platform.OS !== "android" || !NativeAndroid) {
+  if (Platform.OS !== 'android' || !NativeAndroid) {
     throw new ExpoAIError({
-      code: "UNSUPPORTED_DEVICE",
+      code: 'UNSUPPORTED_DEVICE',
       provider: PROVIDER,
-      message: "Gemini Nano model download is only available on Android.",
+      message: 'Gemini Nano model download is only available on Android.',
     });
   }
   try {
@@ -75,4 +78,4 @@ export async function downloadGeminiNanoModel(): Promise<void> {
   }
 }
 
-export * from "./native.js";
+export * from './native.js';

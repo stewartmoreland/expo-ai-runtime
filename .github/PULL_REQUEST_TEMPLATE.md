@@ -33,7 +33,7 @@ Closes #
 
 - [ ] `npm test`
 - [ ] `npm run typecheck`
-- [ ] Manual device/simulator run (platform + provider: ____)
+- [ ] Manual device/simulator run (platform + provider: \_\_\_\_)
 
 ## Checklist
 

@@ -7,19 +7,19 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "packages/expo-ai-apple-foundation-models/**"
-      - "packages/expo-ai-android-aicore/**"
-      - "examples/basic-generate/**"
-      - "package-lock.json"
-      - ".github/workflows/native.yml"
+      - 'packages/expo-ai-apple-foundation-models/**'
+      - 'packages/expo-ai-android-aicore/**'
+      - 'examples/basic-generate/**'
+      - 'package-lock.json'
+      - '.github/workflows/native.yml'
   push:
     branches: [main]
     paths:
-      - "packages/expo-ai-apple-foundation-models/**"
-      - "packages/expo-ai-android-aicore/**"
-      - "examples/basic-generate/**"
-      - "package-lock.json"
-      - ".github/workflows/native.yml"
+      - 'packages/expo-ai-apple-foundation-models/**'
+      - 'packages/expo-ai-android-aicore/**'
+      - 'examples/basic-generate/**'
+      - 'package-lock.json'
+      - '.github/workflows/native.yml'
   workflow_dispatch:
 
 concurrency:
@@ -33,9 +33,9 @@ env:
   # The example app whose generated ios/ + android/ projects host the native
   # compile (Expo modules don't build standalone). It depends on all packages.
   EXAMPLE: examples/basic-generate
-  SWIFTLINT_VERSION: "0.64.0"
-  KTLINT_VERSION: "1.8.0"
-  DETEKT_VERSION: "1.23.8"
+  SWIFTLINT_VERSION: '0.64.0'
+  KTLINT_VERSION: '1.8.0'
+  DETEKT_VERSION: '1.23.8'
 
 jobs:
   swift-layer:
@@ -85,7 +85,7 @@ jobs:
         if: steps.xcodegate.outputs.skip != 'true'
         working-directory: ${{ env.EXAMPLE }}
         env:
-          CI: "1"
+          CI: '1'
         run: npx expo prebuild -p ios --no-install --clean
       - name: pod install
         if: steps.xcodegate.outputs.skip != 'true'
@@ -118,7 +118,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
       # --- Lint (source-only): BLOCKING ---
       - name: Install ktlint + detekt
@@ -144,7 +144,7 @@ jobs:
       - name: Prebuild Android project
         working-directory: ${{ env.EXAMPLE }}
         env:
-          CI: "1"
+          CI: '1'
         run: npx expo prebuild -p android --no-install --clean
       # Assemble only the AICore module (its Gradle project name is derived from
       # the package name), not the whole RN app — faster and isolated.

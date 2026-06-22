@@ -3,7 +3,7 @@ import {
   ExpoAIError,
   type ExpoAIFallback,
   type GenerateResult,
-} from "@stewmore/expo-ai-core";
+} from '@stewmore/expo-ai-core';
 import {
   Badge,
   Card,
@@ -15,16 +15,16 @@ import {
   Row,
   Screen,
   theme,
-} from "@stewmore/example-shared";
-import { useState } from "react";
-import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+} from '@stewmore/example-shared';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
-const FALLBACKS: ExpoAIFallback[] = ["none", "cloud", "any"];
+const FALLBACKS: ExpoAIFallback[] = ['none', 'cloud', 'any'];
 
 export default function App() {
-  const [prompt, setPrompt] = useState("Summarize the attached contract clause.");
+  const [prompt, setPrompt] = useState('Summarize the attached contract clause.');
   const [sensitive, setSensitive] = useState(true);
-  const [fallback, setFallback] = useState<ExpoAIFallback>("none");
+  const [fallback, setFallback] = useState<ExpoAIFallback>('none');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [error, setError] = useState<ExpoAIError | null>(null);
@@ -37,7 +37,7 @@ export default function App() {
       const generated = await ExpoAI.generate({ prompt, sensitive, fallback });
       setResult(generated);
     } catch (caught) {
-      setError(ExpoAIError.from(caught, "none"));
+      setError(ExpoAIError.from(caught, 'none'));
     } finally {
       setBusy(false);
     }
@@ -61,15 +61,17 @@ export default function App() {
                 onPress={() => setFallback(option)}
                 style={[styles.chip, selected ? styles.chipSelected : null]}
               >
-                <Text style={[styles.chipText, selected ? styles.chipTextSelected : null]}>{option}</Text>
+                <Text style={[styles.chipText, selected ? styles.chipTextSelected : null]}>
+                  {option}
+                </Text>
               </Pressable>
             );
           })}
         </Row>
         <KeyValue label="Cloud endpoint" value={CLOUD_ENDPOINT} />
         <Text style={styles.note}>
-          A sensitive prompt is only sent to a third-party cloud when fallback is explicitly “cloud”.
-          With “none” or “any” it stays on-device or fails — it is never sent silently.
+          A sensitive prompt is only sent to a third-party cloud when fallback is explicitly
+          “cloud”. With “none” or “any” it stays on-device or fails — it is never sent silently.
         </Text>
       </Card>
 
@@ -82,13 +84,13 @@ export default function App() {
         <Card title="Result">
           <ProviderPrivacy provider={result.provider} privacy={result.privacy} />
           {result.usedFallback ? <Badge label="used fallback" tone="warn" /> : null}
-          <Text style={{ color: "#eef2ff", fontSize: 15, lineHeight: 22 }}>{result.text}</Text>
+          <Text style={{ color: '#eef2ff', fontSize: 15, lineHeight: 22 }}>{result.text}</Text>
         </Card>
       ) : null}
 
       {error ? (
-        <Card title={error.code === "UNAVAILABLE" ? "Blocked (no leak)" : "Error"}>
-          <Badge label={error.code} tone={error.code === "UNAVAILABLE" ? "info" : "danger"} />
+        <Card title={error.code === 'UNAVAILABLE' ? 'Blocked (no leak)' : 'Error'}>
+          <Badge label={error.code} tone={error.code === 'UNAVAILABLE' ? 'info' : 'danger'} />
           <Text style={{ color: theme.color.subtle }}>{error.message}</Text>
         </Card>
       ) : null}
@@ -97,7 +99,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   label: { color: theme.color.subtle, fontSize: 14 },
   note: { color: theme.color.subtle, fontSize: 13, lineHeight: 19 },
   chip: {
@@ -108,6 +110,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   chipSelected: { backgroundColor: theme.color.accent, borderColor: theme.color.accent },
-  chipText: { color: theme.color.subtle, fontWeight: "600" },
-  chipTextSelected: { color: "#0b1020" },
+  chipText: { color: theme.color.subtle, fontWeight: '600' },
+  chipTextSelected: { color: '#0b1020' },
 });

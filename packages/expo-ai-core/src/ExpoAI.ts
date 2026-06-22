@@ -6,15 +6,10 @@
  * at import time); this namespace never talks to native modules directly.
  */
 
-import { getAvailability, getCapabilities, listProviders } from "./capability-registry.js";
-import {
-  routeGenerate,
-  routeGenerateObject,
-  routeStream,
-  routeTask,
-} from "./provider-router.js";
-import { clearAdapters, registerAdapter, unregisterAdapter } from "./registry.js";
-import { createSession } from "./session-manager.js";
+import { getAvailability, getCapabilities, listProviders } from './capability-registry.js';
+import { routeGenerate, routeGenerateObject, routeStream, routeTask } from './provider-router.js';
+import { clearAdapters, registerAdapter, unregisterAdapter } from './registry.js';
+import { createSession } from './session-manager.js';
 import type {
   CreateSessionOptions,
   GenerateChunk,
@@ -24,7 +19,7 @@ import type {
   ProofreadOptions,
   RewriteOptions,
   SummarizeOptions,
-} from "./types.js";
+} from './types.js';
 
 export const ExpoAI = {
   /** Availability of the best currently-available provider. */
@@ -45,7 +40,7 @@ export const ExpoAI = {
   },
 
   /** Create a cross-platform session (native when supported, emulated otherwise). */
-  createSession(options?: CreateSessionOptions): Promise<import("./types.js").ExpoAISession> {
+  createSession(options?: CreateSessionOptions): Promise<import('./types.js').ExpoAISession> {
     return createSession(options);
   },
 
@@ -56,7 +51,7 @@ export const ExpoAI = {
 
   /** Summarize text (native task API when available, prompt-emulated otherwise). */
   summarize(options: SummarizeOptions): Promise<GenerateResult> {
-    return routeTask("summarize", {
+    return routeTask('summarize', {
       text: options.text,
       provider: options.provider,
       fallback: options.fallback,
@@ -68,7 +63,7 @@ export const ExpoAI = {
 
   /** Rewrite text in a given style. */
   rewrite(options: RewriteOptions): Promise<GenerateResult> {
-    return routeTask("rewrite", {
+    return routeTask('rewrite', {
       text: options.text,
       provider: options.provider,
       fallback: options.fallback,
@@ -80,7 +75,7 @@ export const ExpoAI = {
 
   /** Proofread text. */
   proofread(options: ProofreadOptions): Promise<GenerateResult> {
-    return routeTask("proofread", {
+    return routeTask('proofread', {
       text: options.text,
       provider: options.provider,
       fallback: options.fallback,

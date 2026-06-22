@@ -6,38 +6,38 @@ tags:
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "title-cloud-fallback"
+    id: 'title-cloud-fallback'
 - assertVisible:
-    id: "card-routing"
+    id: 'card-routing'
 # Switch defaults ON. Toggle off, then back on; assert via checked state.
 - assertVisible:
-    id: "switch-sensitive"
+    id: 'switch-sensitive'
     checked: true
 - tapOn:
-    id: "switch-sensitive"
+    id: 'switch-sensitive'
 - assertVisible:
-    id: "switch-sensitive"
+    id: 'switch-sensitive'
     checked: false
 - tapOn:
-    id: "switch-sensitive"
+    id: 'switch-sensitive'
 - assertVisible:
-    id: "switch-sensitive"
+    id: 'switch-sensitive'
     checked: true
 # Select each fallback chip by id. Text "none"/"cloud"/"any" collides with the
 # note paragraph and the "Cloud endpoint" label, so id is required here.
 - tapOn:
-    id: "chip-none"
+    id: 'chip-none'
 - tapOn:
-    id: "chip-cloud"
+    id: 'chip-cloud'
 - tapOn:
-    id: "chip-any"
+    id: 'chip-any'
 - assertVisible:
-    id: "chip-any"
+    id: 'chip-any'
 # Endpoint value node + a static substring of the privacy note. The note text is
 # wrapped in .* because this Maestro/iOS build matches text (accessibilityText)
 # as a FULL-string regex, so a bare substring of the longer note never matches.
 - assertVisible:
-    id: "kv-cloud-endpoint"
-- assertVisible: ".*never sent silently.*"
+    id: 'kv-cloud-endpoint'
+- assertVisible: '.*never sent silently.*'
 - assertVisible:
-    id: "button-generate"
+    id: 'button-generate'
