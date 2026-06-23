@@ -11,11 +11,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@stewmore/example-shared": "^0.1.0",
-    "@stewmore/expo-ai-core": "^0.1.0",
-    "@stewmore/expo-ai-apple-foundation-models": "^0.1.0",
-    "@stewmore/expo-ai-android-aicore": "^0.1.0",
-    "@stewmore/expo-ai-cloud": "^0.1.0",
+    "@stewmore/example-shared": "*",
+    "@stewmore/expo-ai-core": "*",
+    "@stewmore/expo-ai-apple-foundation-models": "*",
+    "@stewmore/expo-ai-android-aicore": "*",
+    "@stewmore/expo-ai-cloud": "*",
     "expo": "~56.0.0",
     "expo-build-properties": "~56.0.19",
     "react": "19.2.3",
