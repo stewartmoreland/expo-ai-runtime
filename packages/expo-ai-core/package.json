@@ -4,6 +4,13 @@
   "description": "Mobile-native AI runtime core: unified ExpoAI API, provider router, capability detection, sessions, structured output, privacy metadata, and normalized errors.",
   "license": "MIT",
   "author": "Stewart Moreland <stewart.moreland@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stewartmoreland/expo-ai-runtime.git",
+    "directory": "packages/expo-ai-core"
+  },
+  "homepage": "https://github.com/stewartmoreland/expo-ai-runtime/tree/main/packages/expo-ai-core#readme",
+  "bugs": "https://github.com/stewartmoreland/expo-ai-runtime/issues",
   "publishConfig": {
     "access": "public"
   },

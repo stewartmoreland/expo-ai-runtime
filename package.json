@@ -5,6 +5,12 @@
   "description": "A mobile-native AI runtime for Expo and React Native: one TypeScript API over Apple Foundation Models, Android Gemini Nano (ML Kit GenAI / AICore), and an explicit cloud fallback.",
   "license": "MIT",
   "author": "Stewart Moreland <stewart.moreland@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stewartmoreland/expo-ai-runtime.git"
+  },
+  "homepage": "https://github.com/stewartmoreland/expo-ai-runtime#readme",
+  "bugs": "https://github.com/stewartmoreland/expo-ai-runtime/issues",
   "workspaces": [
     "packages/*",
     "examples/*"

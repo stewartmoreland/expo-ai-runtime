@@ -4,6 +4,13 @@
   "description": "Cloud fallback adapter for the Expo AI Runtime. POSTs to a configurable backend (OpenAI / Anthropic / Gemini / Bedrock / custom) with streaming via expo/fetch.",
   "license": "MIT",
   "author": "Stewart Moreland <stewart.moreland@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stewartmoreland/expo-ai-runtime.git",
+    "directory": "packages/expo-ai-cloud"
+  },
+  "homepage": "https://github.com/stewartmoreland/expo-ai-runtime/tree/main/packages/expo-ai-cloud#readme",
+  "bugs": "https://github.com/stewartmoreland/expo-ai-runtime/issues",
   "publishConfig": {
     "access": "public"
   },
