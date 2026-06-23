@@ -20,7 +20,7 @@ jobs:
     name: JS — lint, typecheck, build, test + coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -44,7 +44,7 @@ jobs:
     name: API surface & package contracts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -70,7 +70,7 @@ jobs:
       contents: write # push the release commit + tag, create the GitHub release
       id-token: write # mint the OIDC token for npm Trusted Publisher publishing
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: main # check out the branch (not a detached SHA) so the release commit can push back
           fetch-depth: 0 # release-it needs full history + tags to compute the bump
