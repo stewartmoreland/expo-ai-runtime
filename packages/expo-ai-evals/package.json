@@ -1,6 +1,6 @@
 {
   "name": "@stewmore/expo-ai-evals",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Node-first evaluation harness for the Expo AI Runtime: provider comparison, schema validity, latency, fallback frequency, and privacy boundaries.",
   "license": "MIT",
   "author": "Stewart Moreland <stewart.moreland@gmail.com>",
@@ -38,8 +38,8 @@
     "eval": "tsx src/cli.ts"
   },
   "dependencies": {
-    "@stewmore/expo-ai-cloud": "^0.7.1",
-    "@stewmore/expo-ai-core": "^0.7.1"
+    "@stewmore/expo-ai-cloud": "^0.7.2",
+    "@stewmore/expo-ai-core": "^0.7.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

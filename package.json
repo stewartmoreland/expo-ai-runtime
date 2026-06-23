@@ -1,6 +1,6 @@
 {
   "name": "expo-ai-runtime",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "private": true,
   "description": "A mobile-native AI runtime for Expo and React Native: one TypeScript API over Apple Foundation Models, Android Gemini Nano (ML Kit GenAI / AICore), and an explicit cloud fallback.",
   "license": "MIT",
