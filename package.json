@@ -44,7 +44,7 @@
     "globals": "^17.6.0",
     "prettier": "^3.8.4",
     "publint": "^0.3.12",
-    "release-it": "^19.2.4",
+    "release-it": "^20.2.0",
     "size-limit": "^11.2.0",
     "typescript-eslint": "^8.61.1"
   },
