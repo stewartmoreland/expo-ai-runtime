@@ -107,20 +107,22 @@ jobs:
             echo "release=false" >> "$GITHUB_OUTPUT"
             echo "No feat/fix/perf/breaking commits since ${LAST_TAG:-<root>} — skipping publish."
           fi
-      - name: release-it (bump, changelog, tag, GitHub release, publish all @stewmore/* packages)
+      # release-it pushes the release commit + tag to main itself (git.push:true in
+      # .release-it.json) BEFORE creating the GitHub release — so the GitHub release
+      # attaches to the already-pushed tag at the correct commit. Pushing here (rather
+      # than in a later step) is what keeps the tag and origin/main in sync; creating
+      # the GitHub release first would mint v${version} at the wrong (pre-release) SHA.
+      - name: release-it (bump, changelog, tag, push, GitHub release, publish all @stewmore/* packages)
         if: steps.decide.outputs.release == 'true'
         run: npx release-it --ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
-      - name: Push release commit to main
-        if: steps.decide.outputs.release == 'true'
-        run: git push origin main --follow-tags
       - name: Verify release landed on main
         if: steps.decide.outputs.release == 'true'
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          git fetch origin main --tags
+          git fetch origin main # tags already match remote (release-it pushed them); --tags would clobber-reject
           REMOTE_VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
           REMOTE_SHA=$(git rev-parse origin/main)
           TAG_SHA=$(git rev-parse "v${VERSION}^{commit}")
