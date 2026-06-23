@@ -50,6 +50,14 @@ const PACKAGES: Pkg[] = [
     to: '/docs/packages/cloud',
   },
   {
+    name: 'expo-ai-react',
+    npm: '@stewmore/expo-ai-react',
+    description: 'React hooks for the ExpoAI API.',
+    platform: 'React',
+    tone: 'info',
+    to: '/docs/packages/react',
+  },
+  {
     name: 'evals',
     npm: '@stewmore/expo-ai-evals',
     description:
