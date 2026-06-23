@@ -1,6 +1,6 @@
 {
   "name": "@stewmore/expo-ai-cloud",
-  "version": "0.1.1",
+  "version": "0.7.1",
   "description": "Cloud fallback adapter for the Expo AI Runtime. POSTs to a configurable backend (OpenAI / Anthropic / Gemini / Bedrock / custom) with streaming via expo/fetch.",
   "license": "MIT",
   "author": "Stewart Moreland <stewart.moreland@gmail.com>",
@@ -45,7 +45,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@stewmore/expo-ai-core": "^0.1.0"
+    "@stewmore/expo-ai-core": "^0.7.1"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.9",

@@ -1,6 +1,6 @@
 {
   "name": "@stewmore/expo-ai-react",
-  "version": "0.1.0",
+  "version": "0.7.1",
   "description": "React hooks for the Expo AI Runtime: useGenerate, useChat, useObject, useCapabilities — ai/react-style ergonomics over the on-device, privacy-first core.",
   "license": "MIT",
   "author": "Stewart Moreland <stewart.moreland@gmail.com>",
@@ -47,7 +47,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@stewmore/expo-ai-core": "^0.1.0"
+    "@stewmore/expo-ai-core": "^0.7.1"
   },
   "peerDependencies": {
     "react": ">=18.0.0"

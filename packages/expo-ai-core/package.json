@@ -1,6 +1,6 @@
 {
   "name": "@stewmore/expo-ai-core",
-  "version": "0.1.0",
+  "version": "0.7.1",
   "description": "Mobile-native AI runtime core: unified ExpoAI API, provider router, capability detection, sessions, structured output, privacy metadata, and normalized errors.",
   "license": "MIT",
   "author": "Stewart Moreland <stewart.moreland@gmail.com>",
