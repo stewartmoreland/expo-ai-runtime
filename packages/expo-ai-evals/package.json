@@ -42,7 +42,7 @@
     "@stewmore/expo-ai-core": "^0.7.2"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^26.0.1",
     "@vitest/coverage-v8": "^4.1.9",
     "tsx": "^4.19.2",
     "typescript": "~6.0.3",
