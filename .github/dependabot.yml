@@ -6,14 +6,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
-    # Batch updates so we get a few reviewable PRs instead of one per package.
+    # Batch ALL update types (majors included) into two grouped PRs so we get a
+    # couple of reviewable PRs a week instead of one per package.
     groups:
       dev-dependencies:
         dependency-type: development
-        update-types: [minor, patch]
       production-dependencies:
         dependency-type: production
-        update-types: [minor, patch]
     # Expo / React Native versions track the installed SDK. Let `expo install --fix`
     # own those majors (see CONTRIBUTING / examples) — Dependabot bumping them in
     # isolation would break SDK alignment. Security patches still come through as
@@ -32,8 +31,21 @@ updates:
       - dependency-name: '@types/react'
         update-types: [version-update:semver-major]
 
+  # Docs site has its own lockfile outside the npm workspaces — without this entry
+  # its dependencies (and their security alerts) never get update PRs.
+  - package-ecosystem: npm
+    directory: '/website'
+    schedule:
+      interval: weekly
+    groups:
+      website-dependencies:
+        patterns: ['*']
+
   # Keep the GitHub Actions in ci.yml current (clears Node-runtime deprecations).
   - package-ecosystem: github-actions
     directory: '/'
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns: ['*']
