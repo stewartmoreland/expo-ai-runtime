@@ -40,15 +40,21 @@ env:
 jobs:
   swift-layer:
     name: Swift — lint + compile (iOS, Xcode ${{ matrix.xcode }})
-    # Pinned (not macos-latest) to the image that ships both Xcode 26.x and the
-    # current stable Xcode, so each matrix leg selects a real install.
-    runs-on: macos-26
+    # One image per leg: macos-26 ships only Xcode 26.x, so a 'latest-stable'
+    # leg there just re-runs 26.6. Xcode 27 lives on the separate xcode-27 image.
+    runs-on: ${{ matrix.os }}
+    # The xcode-27 image is in preview; don't let runner gaps block PRs.
+    continue-on-error: ${{ matrix.preview }}
     strategy:
       fail-fast: false
       matrix:
-        # '26' proves the iOS 26 SDK still compiles the iOS 27-guarded code paths;
-        # 'latest-stable' covers the newest SDK.
-        xcode: ['26', 'latest-stable']
+        include:
+          # Proves the iOS 26 SDK (FoundationModels 1.5.x) still compiles, with
+          # every `canImport(FoundationModels, _version: 2.0)` block compiled out.
+          - { xcode: '26', os: macos-26, preview: false }
+          # The only leg that type-checks the 2.0-guarded code (usage, PCC,
+          # ContextOptions, tokenCount, LanguageModelError mapping).
+          - { xcode: '27', os: xcode-27, preview: true }
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v6
