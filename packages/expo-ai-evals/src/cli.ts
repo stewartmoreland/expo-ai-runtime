@@ -40,6 +40,9 @@ async function main(): Promise<void> {
   }
   const fallback = values.fallback as ExpoAIFallback;
   const providers = values.providers.split(',').map((p) => p.trim()) as ExpoAIProvider[];
+  if (process.env.ENDPOINT && !providers.includes('cloud')) {
+    console.warn('ENDPOINT is set but ignored: add "cloud" to --providers to use it.');
+  }
 
   clearAdapters();
 
