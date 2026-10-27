@@ -12,12 +12,14 @@ import type {
   AdapterGenerateResult,
   AdapterSession,
   AdapterStreamHandlers,
+  AdapterUsage,
   ExpoAIAdapter,
   NormalizedGenerateRequest,
   StreamHandle,
 } from './adapter.js';
 import { unavailableCapabilities } from './capability-registry.js';
 import { ExpoAIError } from './errors.js';
+import { USAGE_COUNTS } from './result.js';
 import type {
   CreateSessionOptions,
   ExpoAIAvailability,
@@ -25,6 +27,7 @@ import type {
   ExpoAIFinishReason,
   ExpoAIProvider,
   ExpoAIUnavailableReason,
+  ExpoAIUsageSource,
 } from './types.js';
 
 /* --------------------------- native module shape --------------------------- */
@@ -33,12 +36,23 @@ export type NativeAvailability = {
   available: boolean;
   provider?: string;
   reasonUnavailable?: string;
+  supportedLanguages?: string[];
+  contextWindow?: number;
 };
 
 export type NativeGenerateResult = {
   text: string;
   finishReason?: string;
-  usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+    cachedInputTokens?: number;
+    reasoningTokens?: number;
+    source?: string;
+  };
+  /** Error-as-value: native resolves (not rejects) with this on failure so the payload survives the bridge. */
+  error?: Record<string, unknown>;
 };
 
 export type NativeStreamEvent = {
@@ -66,6 +80,12 @@ export interface NativeStreamingModule {
   disposeSession?(sessionId: string): Promise<void>;
   startStreaming(requestId: string, options: Record<string, unknown>): Promise<void>;
   cancelStreaming(requestId: string): Promise<void>;
+  /** Native guided generation; `text` is the JSON string. */
+  generateObject?(options: Record<string, unknown>): Promise<NativeGenerateResult>;
+  /** Cancel an in-flight generate / object / session request by its `requestId` option. */
+  cancel?(requestId: string): Promise<void>;
+  prewarm?(options: Record<string, unknown>): Promise<boolean>;
+  prewarmSession?(sessionId: string, options: Record<string, unknown>): Promise<boolean>;
   addListener(
     eventName: 'onExpoAIStream',
     listener: (event: NativeStreamEvent) => void,
@@ -96,16 +116,57 @@ function nativeOptions(req: NormalizedGenerateRequest): Record<string, unknown> 
   if (req.instructions !== undefined) options.instructions = req.instructions;
   if (req.temperature !== undefined) options.temperature = req.temperature;
   if (req.maxOutputTokens !== undefined) options.maxOutputTokens = req.maxOutputTokens;
+  if (req.reasoningLevel !== undefined) options.reasoningLevel = req.reasoningLevel;
   return options;
 }
+
+const USAGE_SOURCES: readonly string[] = ['provider', 'estimated', 'unavailable'];
 
 function mapResult(result: NativeGenerateResult): AdapterGenerateResult {
   const mapped: AdapterGenerateResult = { text: result.text };
   if (result.finishReason) {
     mapped.finishReason = result.finishReason as ExpoAIFinishReason;
   }
-  if (result.usage) mapped.usage = result.usage;
+  if (result.usage) {
+    const usage: AdapterUsage = {};
+    for (const key of USAGE_COUNTS) {
+      if (typeof result.usage[key] === 'number') usage[key] = result.usage[key];
+    }
+    if (result.usage.source && USAGE_SOURCES.includes(result.usage.source)) {
+      usage.source = result.usage.source as ExpoAIUsageSource;
+    }
+    mapped.usage = usage;
+  }
   return mapped;
+}
+
+/** Throw an error-as-value native result as a typed {@link ExpoAIError}. */
+function unwrap(result: NativeGenerateResult, provider: ExpoAIProvider): AdapterGenerateResult {
+  if (result.error) throw ExpoAIError.from(result.error, provider);
+  return mapResult(result);
+}
+
+/**
+ * Run a request-scoped native call: `run` gets a fresh `requestId`, and aborting
+ * `req.signal` asks native to `cancel(requestId)`.
+ */
+async function cancellable(
+  native: NativeStreamingModule,
+  provider: ExpoAIProvider,
+  req: NormalizedGenerateRequest,
+  run: (requestId: string) => Promise<NativeGenerateResult>,
+): Promise<AdapterGenerateResult> {
+  if (req.signal?.aborted) throw new ExpoAIError({ code: 'CANCELLED', provider });
+  const requestId = newRequestId(provider);
+  const onAbort = () => void native.cancel?.(requestId).catch(() => undefined);
+  req.signal?.addEventListener('abort', onAbort, { once: true });
+  try {
+    return unwrap(await run(requestId), provider);
+  } catch (error) {
+    throw ExpoAIError.from(error, provider);
+  } finally {
+    req.signal?.removeEventListener('abort', onAbort);
+  }
 }
 
 function resolveDoneResult(
@@ -148,7 +209,8 @@ function bridgeNativeStream(
       case 'done':
         settled = true;
         subscription.remove();
-        handlers.onDone(resolveDoneResult(event.result, accumulated));
+        if (event.result?.error) handlers.onError(ExpoAIError.from(event.result.error, provider));
+        else handlers.onDone(resolveDoneResult(event.result, accumulated));
         break;
       case 'error':
         settled = true;
@@ -196,12 +258,13 @@ async function createNativeSession(
   return {
     id: sessionId,
     provider,
-    async generate(req) {
-      try {
-        return mapResult(await native.generateInSession!(sessionId, nativeOptions(req)));
-      } catch (error) {
-        throw ExpoAIError.from(error, provider);
-      }
+    generate(req) {
+      return cancellable(native, provider, req, (requestId) =>
+        native.generateInSession!(sessionId, { ...nativeOptions(req), requestId }),
+      );
+    },
+    async prewarm(opts) {
+      return (await native.prewarmSession?.(sessionId, opts).catch(() => false)) ?? false;
     },
     async reset() {
       try {
@@ -229,42 +292,67 @@ export function createNativeAdapter(
 ): ExpoAIAdapter {
   const { provider, capabilityProfile } = options;
 
-  async function getAvailability(): Promise<ExpoAIAvailability> {
+  async function probe(): Promise<NativeAvailability> {
     try {
-      const result = await native.getAvailability();
-      const availability: ExpoAIAvailability = { available: result.available, provider };
-      if (result.reasonUnavailable) {
-        availability.reasonUnavailable = result.reasonUnavailable as ExpoAIUnavailableReason;
-      }
-      return availability;
+      return await native.getAvailability();
     } catch {
       // A failed availability probe means the provider is unusable, not an error
       // to throw at the caller.
-      return { available: false, provider, reasonUnavailable: 'unknown' };
+      return { available: false, reasonUnavailable: 'unknown' };
     }
   }
 
   const adapter: ExpoAIAdapter = {
     provider,
-    getAvailability,
-    async getCapabilities() {
-      const availability = await getAvailability();
-      if (!availability.available) {
-        return unavailableCapabilities(provider, availability.reasonUnavailable ?? 'unknown');
+    async getAvailability() {
+      const raw = await probe();
+      const availability: ExpoAIAvailability = { available: raw.available, provider };
+      if (raw.reasonUnavailable) {
+        availability.reasonUnavailable = raw.reasonUnavailable as ExpoAIUnavailableReason;
       }
-      return { available: true, provider, ...capabilityProfile };
+      if (raw.supportedLanguages) availability.supportedLanguages = raw.supportedLanguages;
+      return availability;
     },
-    async generate(req) {
-      try {
-        return mapResult(await native.generate(nativeOptions(req)));
-      } catch (error) {
-        throw ExpoAIError.from(error, provider);
+    async getCapabilities() {
+      const raw = await probe();
+      if (!raw.available) {
+        return unavailableCapabilities(
+          provider,
+          (raw.reasonUnavailable as ExpoAIUnavailableReason | undefined) ?? 'unknown',
+        );
       }
+      return {
+        available: true,
+        provider,
+        ...capabilityProfile,
+        ...(raw.contextWindow ? { contextWindow: raw.contextWindow } : {}),
+      };
+    },
+    generate(req) {
+      return cancellable(native, provider, req, (requestId) =>
+        native.generate({ ...nativeOptions(req), requestId }),
+      );
     },
     stream(req, handlers) {
       return bridgeNativeStream(native, provider, req, handlers);
     },
   };
+
+  if (native.generateObject) {
+    adapter.generateObject = (req) =>
+      cancellable(native, provider, req, (requestId) =>
+        native.generateObject!({
+          ...nativeOptions(req),
+          requestId,
+          schemaJson: JSON.stringify(req.schema),
+          ...(req.schemaName !== undefined ? { schemaName: req.schemaName } : {}),
+        }),
+      );
+  }
+
+  if (native.prewarm) {
+    adapter.prewarm = (opts) => native.prewarm!(opts).catch(() => false);
+  }
 
   if (native.createSession) {
     adapter.createSession = (sessionOptions) =>

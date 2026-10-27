@@ -7,8 +7,15 @@
  * JSON which is validated and, on failure, re-prompted with the errors.
  */
 
+import type { AdapterGenerateResult, AdapterUsage } from './adapter.js';
 import { ExpoAIError } from './errors.js';
-import type { ExpoAIProvider, JSONSchema, JSONSchemaType } from './types.js';
+import { USAGE_COUNTS } from './result.js';
+import type {
+  ExpoAIProvider,
+  ExpoAIStructuredOutputMode,
+  JSONSchema,
+  JSONSchemaType,
+} from './types.js';
 
 export type ValidationResult = { valid: boolean; errors: string[] };
 
@@ -441,16 +448,25 @@ export type GenerateValidatedObjectOptions = {
   basePrompt: string;
   schemaName?: string;
   maxRepairAttempts?: number;
-  /** Run one text generation for the given prompt. */
-  generateText: (prompt: string) => Promise<string>;
+  /** Run one text generation for the given prompt. A bare string carries no usage. */
+  generateText: (prompt: string) => Promise<string | AdapterGenerateResult>;
   /** Optional native guided generation that returns JSON text for the schema. */
-  nativeObject?: () => Promise<string>;
+  nativeObject?: () => Promise<string | AdapterGenerateResult>;
   /**
    * Pre-generated text to validate as attempt 0 (e.g. already-streamed output),
    * bypassing the initial `nativeObject`/`generateText` call. Repair attempts,
    * if needed, still go through `generateText`. Ignored when empty/whitespace.
    */
   seedText?: string;
+  /** Usage of the generation that produced `seedText`. */
+  seedUsage?: AdapterUsage;
+  /**
+   * Strategy for attempt 0 (repairs always use `generateText`). Defaults to
+   * `'auto'`: native when `nativeObject` exists, falling back to the schema
+   * prompt on UNSUPPORTED_SCHEMA. `'native'` without `nativeObject` throws
+   * UNSUPPORTED_SCHEMA (fallback recommended, so the router tries the next provider).
+   */
+  mode?: ExpoAIStructuredOutputMode;
 };
 
 export type ValidatedObjectResult = {
@@ -458,30 +474,54 @@ export type ValidatedObjectResult = {
   raw: string;
   attempts: number;
   usedRepair: boolean;
+  /** The strategy attempt 0 actually used. */
+  mode: 'native' | 'emulated';
+  /** Summed across attempts; `{ source: 'unavailable' }` if any attempt reported no counts. */
+  usage?: AdapterUsage;
 };
 
 export async function generateValidatedObject(
   options: GenerateValidatedObjectOptions,
 ): Promise<ValidatedObjectResult> {
   const maxRepair = options.maxRepairAttempts ?? 2;
+  const requested = options.mode ?? 'auto';
   const seed = options.seedText?.trim() ? options.seedText : undefined;
+  if (requested === 'native' && seed === undefined && !options.nativeObject) {
+    throw new ExpoAIError({
+      code: 'UNSUPPORTED_SCHEMA',
+      provider: options.provider,
+      message: `Provider ${options.provider} does not support native structured output.`,
+      fallbackRecommended: true,
+    });
+  }
+  let mode: 'native' | 'emulated' =
+    seed === undefined && requested !== 'emulated' && options.nativeObject ? 'native' : 'emulated';
+  const schemaPrompt = () =>
+    options.generateText(buildSchemaPrompt(options.basePrompt, options.schema, options.schemaName));
+  const usages: Array<AdapterUsage | undefined> = [];
   let lastErrors: string[] = [];
   let lastText = '';
   let attempts = 0;
 
   for (let attempt = 0; attempt <= maxRepair; attempt++) {
     attempts++;
-    let text: string;
+    let output: string | AdapterGenerateResult;
     if (attempt === 0 && seed !== undefined) {
-      text = seed;
-    } else if (attempt === 0 && options.nativeObject) {
-      text = await options.nativeObject();
+      output = { text: seed, usage: options.seedUsage };
+    } else if (attempt === 0 && mode === 'native') {
+      try {
+        output = await options.nativeObject!();
+      } catch (error) {
+        // 'auto' degrades to the schema prompt on the same provider.
+        const code = ExpoAIError.from(error, options.provider).code;
+        if (requested !== 'auto' || code !== 'UNSUPPORTED_SCHEMA') throw error;
+        mode = 'emulated';
+        output = await schemaPrompt();
+      }
     } else if (attempt === 0) {
-      text = await options.generateText(
-        buildSchemaPrompt(options.basePrompt, options.schema, options.schemaName),
-      );
+      output = await schemaPrompt();
     } else {
-      text = await options.generateText(
+      output = await options.generateText(
         buildRepairPrompt(
           options.basePrompt,
           options.schema,
@@ -491,6 +531,8 @@ export async function generateValidatedObject(
         ),
       );
     }
+    const text = typeof output === 'string' ? output : output.text;
+    usages.push(typeof output === 'string' ? undefined : output.usage);
     lastText = text;
 
     // Try every JSON-looking candidate (fenced blocks, balanced spans, raw text)
@@ -502,7 +544,14 @@ export async function generateValidatedObject(
       if (!parsed.ok) continue;
       const validation = validateAgainstSchema(parsed.value, options.schema);
       if (validation.valid) {
-        return { object: parsed.value, raw: text, attempts, usedRepair: attempt > 0 };
+        return {
+          object: parsed.value,
+          raw: text,
+          attempts,
+          usedRepair: attempt > 0,
+          mode,
+          usage: sumUsage(usages),
+        };
       }
       if (firstParseErrors === null) firstParseErrors = validation.errors;
     }
@@ -516,4 +565,24 @@ export async function generateValidatedObject(
     retryable: false,
     fallbackRecommended: true,
   });
+}
+
+/**
+ * Sum usage across attempts. A field is summed only when every attempt reported
+ * it, and any attempt without counts makes the total unavailable, so a partial
+ * sum is never presented as a total.
+ */
+function sumUsage(usages: Array<AdapterUsage | undefined>): AdapterUsage {
+  const reported = usages.filter(
+    (u): u is AdapterUsage => u !== undefined && USAGE_COUNTS.some((k) => typeof u[k] === 'number'),
+  );
+  if (reported.length === 0 || reported.length !== usages.length) return { source: 'unavailable' };
+  const total: AdapterUsage = {};
+  for (const key of USAGE_COUNTS) {
+    if (reported.every((u) => typeof u[key] === 'number')) {
+      total[key] = reported.reduce((sum, u) => sum + (u[key] as number), 0);
+    }
+  }
+  if (reported.some((u) => u.source === 'estimated')) total.source = 'estimated';
+  return total;
 }

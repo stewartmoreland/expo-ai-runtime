@@ -14,10 +14,15 @@ import type {
   ExpoAICapabilities,
   ExpoAIFinishReason,
   ExpoAIProvider,
+  ExpoAIReasoningLevel,
   ExpoAIUsage,
+  ExpoAIUsageSource,
   JSONSchema,
   LocalModelConfig,
 } from './types.js';
+
+/** Usage as an adapter reports it. `source` defaults to `'provider'` when counts are present. */
+export type AdapterUsage = Omit<ExpoAIUsage, 'source'> & { source?: ExpoAIUsageSource };
 
 /** A request after the router has stripped routing/fallback concerns. */
 export type NormalizedGenerateRequest = {
@@ -25,6 +30,7 @@ export type NormalizedGenerateRequest = {
   instructions?: string;
   temperature?: number;
   maxOutputTokens?: number;
+  reasoningLevel?: ExpoAIReasoningLevel;
   metadata?: Record<string, string>;
   signal?: AbortSignal;
   model?: LocalModelConfig;
@@ -39,7 +45,7 @@ export type NormalizedObjectRequest = NormalizedGenerateRequest & {
 export type AdapterGenerateResult = {
   text: string;
   finishReason?: ExpoAIFinishReason;
-  usage?: ExpoAIUsage;
+  usage?: AdapterUsage;
   raw?: unknown;
 };
 
@@ -69,6 +75,8 @@ export interface AdapterSession {
   generateEphemeral?(req: NormalizedGenerateRequest): Promise<AdapterGenerateResult>;
   /** Commit a single (user, assistant) turn to the transcript. */
   commitTurn?(userPrompt: string, assistantText: string): void;
+  /** Best-effort warm-up of the session's model. */
+  prewarm?(opts: { promptPrefix?: string }): Promise<boolean>;
   reset(): Promise<void>;
   dispose(): Promise<void>;
 }
@@ -106,4 +114,7 @@ export interface ExpoAIAdapter {
   summarize?(req: AdapterTaskRequest): Promise<AdapterGenerateResult>;
   rewrite?(req: AdapterRewriteRequest): Promise<AdapterGenerateResult>;
   proofread?(req: AdapterTaskRequest): Promise<AdapterGenerateResult>;
+
+  /** Best-effort warm-up (load the model, cache instructions). Resolves false when not done. */
+  prewarm?(opts: { instructions?: string; promptPrefix?: string }): Promise<boolean>;
 }

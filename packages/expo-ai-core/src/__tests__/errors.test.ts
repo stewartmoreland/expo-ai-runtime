@@ -16,6 +16,26 @@ describe('ExpoAIError', () => {
     expect(notReady.fallbackRecommended).toBe(true);
   });
 
+  it('defaults the newer codes to no fallback', () => {
+    const expected = {
+      QUOTA_EXHAUSTED: false,
+      NETWORK_UNAVAILABLE: true,
+      SERVICE_UNAVAILABLE: true,
+      ENTITLEMENT_MISSING: false,
+      REFUSAL: false,
+      UNSUPPORTED_SCHEMA: false,
+      UNSUPPORTED_LOCALE: false,
+      TOOL_ERROR: true,
+      CONCURRENT_REQUEST: true,
+      BACKGROUND_NOT_ALLOWED: true,
+    } as const;
+    for (const [code, retryable] of Object.entries(expected)) {
+      const error = ExpoAIError.from({ code }, 'apple-foundation-models');
+      expect(error).toMatchObject({ code, retryable, fallbackRecommended: false });
+      expect(error.message.length).toBeGreaterThan(0);
+    }
+  });
+
   it('lets explicit params override defaults', () => {
     const error = new ExpoAIError({
       code: 'SAFETY_BLOCKED',
@@ -87,5 +107,17 @@ describe('ExpoAIError', () => {
       fallbackRecommended: true,
       nativeMessage: '',
     });
+  });
+
+  it('round-trips detail through from() and toJSON()', () => {
+    const error = ExpoAIError.from(
+      { code: 'REFUSAL', detail: 'I cannot help with that.' },
+      'apple-foundation-models',
+    );
+    expect(error.detail).toBe('I cannot help with that.');
+    expect(error.toJSON()).toMatchObject({ code: 'REFUSAL', detail: 'I cannot help with that.' });
+    expect('detail' in new ExpoAIError({ code: 'TIMEOUT', provider: 'cloud' }).toJSON()).toBe(
+      false,
+    );
   });
 });

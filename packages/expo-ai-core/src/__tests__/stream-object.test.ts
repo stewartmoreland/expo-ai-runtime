@@ -142,6 +142,38 @@ describe('ExpoAI.streamObject', () => {
     expect(result.privacy.privacyMode).toBe('on-device');
     expect(result.privacy.sendsPromptOffDevice).toBe(false);
     expect(result.usedFallback).toBe(false);
+    expect(result.usage).toEqual({ source: 'unavailable' });
+    expect(result.structured).toEqual({ mode: 'emulated', attempts: 1, usedRepair: false });
+  });
+
+  it('carries streamed usage onto the result', async () => {
+    registerAdapter(
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        respondWith: '{"name":"Ada","age":36}',
+        usage: { inputTokens: 8, outputTokens: 4 },
+      }),
+    );
+    const result = await ExpoAI.streamObject({ prompt: 'a person', schema: personSchema }).result;
+    expect(result.usage).toEqual({ inputTokens: 8, outputTokens: 4, source: 'provider' });
+  });
+
+  it("'native' runs guided generation once and emits the final object", async () => {
+    registerAdapter(
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        objectText: '{"name":"Ada","age":36}',
+        respondWith: 'SHOULD NOT BE USED',
+      }),
+    );
+    const handle = ExpoAI.streamObject({
+      prompt: 'a person',
+      schema: personSchema,
+      structuredOutput: 'native',
+    });
+    expect(await collect(handle.partialObjectStream)).toEqual([{ name: 'Ada', age: 36 }]);
+    expect((await collect(handle.textStream)).join('')).toBe('{"name":"Ada","age":36}');
+    expect((await handle.result).structured?.mode).toBe('native');
   });
 
   it('exposes the raw text deltas via textStream', async () => {

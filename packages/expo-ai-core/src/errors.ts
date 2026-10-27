@@ -21,6 +21,16 @@ export type ExpoAIErrorCode =
   | 'CANCELLED'
   | 'TIMEOUT'
   | 'NATIVE_PROVIDER_ERROR'
+  | 'QUOTA_EXHAUSTED'
+  | 'NETWORK_UNAVAILABLE'
+  | 'SERVICE_UNAVAILABLE'
+  | 'ENTITLEMENT_MISSING'
+  | 'REFUSAL'
+  | 'UNSUPPORTED_SCHEMA'
+  | 'UNSUPPORTED_LOCALE'
+  | 'TOOL_ERROR'
+  | 'CONCURRENT_REQUEST'
+  | 'BACKGROUND_NOT_ALLOWED'
   | 'UNKNOWN';
 
 /** Default routing semantics per error code. */
@@ -34,7 +44,7 @@ const ERROR_DEFAULTS: Record<ExpoAIErrorCode, ErrorDefaults> = {
   USER_SETTING_REQUIRED: { retryable: false, fallbackRecommended: true },
   // A malformed prompt will fail the same way everywhere — don't burn a fallback.
   INVALID_PROMPT: { retryable: false, fallbackRecommended: false },
-  // A bigger (cloud) model may have room where an on-device model did not.
+  // A provider with a larger context window (e.g. PCC) may have room.
   CONTEXT_WINDOW_EXCEEDED: { retryable: false, fallbackRecommended: true },
   // Never silently re-route blocked content to a third party.
   SAFETY_BLOCKED: { retryable: false, fallbackRecommended: false },
@@ -42,6 +52,18 @@ const ERROR_DEFAULTS: Record<ExpoAIErrorCode, ErrorDefaults> = {
   CANCELLED: { retryable: false, fallbackRecommended: false },
   TIMEOUT: { retryable: true, fallbackRecommended: true },
   NATIVE_PROVIDER_ERROR: { retryable: false, fallbackRecommended: true },
+  // The same input fails the same way, or the condition is not provider-specific:
+  // none of these silently re-route to another provider.
+  QUOTA_EXHAUSTED: { retryable: false, fallbackRecommended: false },
+  NETWORK_UNAVAILABLE: { retryable: true, fallbackRecommended: false },
+  SERVICE_UNAVAILABLE: { retryable: true, fallbackRecommended: false },
+  ENTITLEMENT_MISSING: { retryable: false, fallbackRecommended: false },
+  REFUSAL: { retryable: false, fallbackRecommended: false },
+  UNSUPPORTED_SCHEMA: { retryable: false, fallbackRecommended: false },
+  UNSUPPORTED_LOCALE: { retryable: false, fallbackRecommended: false },
+  TOOL_ERROR: { retryable: true, fallbackRecommended: false },
+  CONCURRENT_REQUEST: { retryable: true, fallbackRecommended: false },
+  BACKGROUND_NOT_ALLOWED: { retryable: true, fallbackRecommended: false },
   UNKNOWN: { retryable: false, fallbackRecommended: true },
 };
 
@@ -52,10 +74,15 @@ export type ExpoAIErrorParams = {
   retryable?: boolean;
   fallbackRecommended?: boolean;
   nativeMessage?: string;
+  /** Extra provider detail, e.g. a model's refusal explanation. */
+  detail?: string;
   cause?: unknown;
 };
 
-/** Serialized form emitted by native modules and accepted by {@link ExpoAIError.from}. */
+/**
+ * Serialized form emitted by native modules and accepted by {@link ExpoAIError.from}.
+ * When `retryable` / `fallbackRecommended` are omitted, the code's defaults apply.
+ */
 export type ExpoAIErrorPayload = {
   code?: string;
   provider?: ExpoAIProvider;
@@ -63,6 +90,7 @@ export type ExpoAIErrorPayload = {
   retryable?: boolean;
   fallbackRecommended?: boolean;
   nativeMessage?: string;
+  detail?: string;
 };
 
 const KNOWN_CODES = new Set<string>(Object.keys(ERROR_DEFAULTS));
@@ -78,6 +106,7 @@ export class ExpoAIError extends Error {
   readonly retryable: boolean;
   readonly fallbackRecommended: boolean;
   readonly nativeMessage?: string;
+  readonly detail?: string;
 
   constructor(params: ExpoAIErrorParams) {
     const defaults = ERROR_DEFAULTS[params.code];
@@ -88,6 +117,7 @@ export class ExpoAIError extends Error {
     this.retryable = params.retryable ?? defaults.retryable;
     this.fallbackRecommended = params.fallbackRecommended ?? defaults.fallbackRecommended;
     this.nativeMessage = params.nativeMessage;
+    if (params.detail !== undefined) this.detail = params.detail;
     if (params.cause !== undefined) {
       (this as { cause?: unknown }).cause = params.cause;
     }
@@ -112,6 +142,7 @@ export class ExpoAIError extends Error {
         retryable: value.retryable,
         fallbackRecommended: value.fallbackRecommended,
         nativeMessage: value.nativeMessage ?? value.message,
+        detail: value.detail,
         cause: value,
       });
     }
@@ -142,7 +173,7 @@ export class ExpoAIError extends Error {
     });
   }
 
-  toJSON(): Required<Omit<ExpoAIErrorParams, 'cause'>> {
+  toJSON(): Required<Omit<ExpoAIErrorParams, 'cause' | 'detail'>> & { detail?: string } {
     return {
       code: this.code,
       provider: this.provider,
@@ -150,6 +181,7 @@ export class ExpoAIError extends Error {
       retryable: this.retryable,
       fallbackRecommended: this.fallbackRecommended,
       nativeMessage: this.nativeMessage ?? '',
+      ...(this.detail !== undefined ? { detail: this.detail } : {}),
     };
   }
 }
@@ -190,6 +222,26 @@ function defaultMessage(code: ExpoAIErrorCode): string {
       return 'The request timed out.';
     case 'NATIVE_PROVIDER_ERROR':
       return 'The native AI provider reported an error.';
+    case 'QUOTA_EXHAUSTED':
+      return 'The usage quota for this AI provider is exhausted.';
+    case 'NETWORK_UNAVAILABLE':
+      return 'The network is unavailable.';
+    case 'SERVICE_UNAVAILABLE':
+      return 'The AI service is temporarily unavailable. Try again later.';
+    case 'ENTITLEMENT_MISSING':
+      return 'The app is missing the entitlement required by this AI provider.';
+    case 'REFUSAL':
+      return 'The model refused to respond to this request.';
+    case 'UNSUPPORTED_SCHEMA':
+      return 'The provider cannot generate output for this schema.';
+    case 'UNSUPPORTED_LOCALE':
+      return 'The provider does not support this language or locale.';
+    case 'TOOL_ERROR':
+      return 'A tool called by the model failed.';
+    case 'CONCURRENT_REQUEST':
+      return 'Another request is already running on this session.';
+    case 'BACKGROUND_NOT_ALLOWED':
+      return 'The provider cannot run while the app is in the background.';
     case 'UNKNOWN':
     default:
       return 'An unknown error occurred.';

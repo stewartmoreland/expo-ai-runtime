@@ -65,8 +65,8 @@ export async function openaiGenerate(body: GenerateBody): Promise<GenerateOutput
     text,
     finishReason: 'stop',
     usage: {
-      inputTokens: data.usage?.prompt_tokens ?? 0,
-      outputTokens: data.usage?.completion_tokens ?? 0,
+      inputTokens: data.usage?.prompt_tokens,
+      outputTokens: data.usage?.completion_tokens,
     },
   };
 }
@@ -103,8 +103,8 @@ export async function anthropicGenerate(body: GenerateBody): Promise<GenerateOut
     text,
     finishReason: 'stop',
     usage: {
-      inputTokens: data.usage?.input_tokens ?? 0,
-      outputTokens: data.usage?.output_tokens ?? 0,
+      inputTokens: data.usage?.input_tokens,
+      outputTokens: data.usage?.output_tokens,
     },
   };
 }

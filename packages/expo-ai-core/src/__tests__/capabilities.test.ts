@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   ExpoAI,
@@ -6,11 +6,14 @@ import {
   getAvailability,
   getCapabilities,
   listProviders,
+  notifyAvailabilityChange,
   registerAdapter,
+  type ExpoAIAvailability,
 } from '../index.js';
-import { createMockAdapter } from '../testing.js';
+import { createMockAdapter, resetPrivacyPolicy } from '../testing.js';
 
 beforeEach(() => clearAdapters());
+afterEach(() => resetPrivacyPolicy());
 
 describe('capability registry', () => {
   it('reports availability of the best available provider', async () => {
@@ -75,5 +78,40 @@ describe('capability registry', () => {
     registerAdapter(createMockAdapter({ provider: 'apple-foundation-models' }));
     expect((await ExpoAI.getAvailability()).available).toBe(true);
     expect((await ExpoAI.getCapabilities()).provider).toBe('apple-foundation-models');
+  });
+
+  it('notifyAvailabilityChange reaches subscribers until remove()', async () => {
+    registerAdapter(
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        available: false,
+        reasonUnavailable: 'model_not_downloaded',
+      }),
+    );
+    const seen: ExpoAIAvailability[] = [];
+    const subscription = ExpoAI.onAvailabilityChange((a) => seen.push(a));
+
+    notifyAvailabilityChange('apple-foundation-models');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(seen).toEqual([
+      {
+        available: false,
+        provider: 'apple-foundation-models',
+        reasonUnavailable: 'model_not_downloaded',
+      },
+    ]);
+
+    subscription.remove();
+    notifyAvailabilityChange('apple-foundation-models');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(seen).toHaveLength(1);
+  });
+
+  it('ExpoAI.prewarm resolves the adapter result, or false when unsupported', async () => {
+    expect(await ExpoAI.prewarm()).toBe(false); // nothing registered: never throws
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models' }));
+    expect(await ExpoAI.prewarm()).toBe(false);
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models', prewarm: true }));
+    expect(await ExpoAI.prewarm({ instructions: 'be brief' })).toBe(true);
   });
 });
