@@ -15,11 +15,12 @@ import {
   ExpoAIError,
   createNativeAdapter,
   createUnavailableNativeAdapter,
+  notifyAvailabilityChange,
   registerAdapter,
   type ExpoAIAdapter,
   type NativeCapabilityProfile,
 } from '@stewmore/expo-ai-core';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { NativeAndroid } from './native.js';
 
@@ -58,6 +59,14 @@ export const androidAICoreAdapter: ExpoAIAdapter =
 
 registerAdapter(androidAICoreAdapter);
 
+// AICore availability can change while backgrounded (model download, Settings);
+// re-probe when the app returns to the foreground.
+if (Platform.OS === 'android' && NativeAndroid) {
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') notifyAvailabilityChange(PROVIDER);
+  });
+}
+
 /**
  * Trigger (or await) the on-device Gemini Nano model download. Resolves when the
  * model is ready; rejects with an {@link ExpoAIError} on failure. No-op off
@@ -76,6 +85,7 @@ export async function downloadGeminiNanoModel(): Promise<void> {
   } catch (error) {
     throw ExpoAIError.from(error, PROVIDER);
   }
+  notifyAvailabilityChange(PROVIDER);
 }
 
 export * from './native.js';
