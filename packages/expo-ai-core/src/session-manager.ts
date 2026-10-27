@@ -17,7 +17,8 @@ import type {
   StreamHandle,
 } from './adapter.js';
 import { ExpoAIError } from './errors.js';
-import { finalizeResult } from './result.js';
+import { isProviderAllowed } from './privacy.js';
+import { finalizeObjectResult, finalizeResult } from './result.js';
 import { selectAvailableAdapter } from './provider-router.js';
 import { createStreamIterable, type StreamSource } from './stream-bridge.js';
 import { generateValidatedObject } from './structured-output.js';
@@ -25,6 +26,7 @@ import type {
   CreateSessionOptions,
   ExpoAIProvider,
   ExpoAISession,
+  GenerateResult,
   SessionGenerateObjectOptions,
   SessionGenerateOptions,
 } from './types.js';
@@ -69,6 +71,9 @@ class EmulatedSession implements AdapterSession {
     }
     if (merged.maxOutputTokens === undefined && this.options.maxOutputTokens !== undefined) {
       merged.maxOutputTokens = this.options.maxOutputTokens;
+    }
+    if (merged.reasoningLevel === undefined && this.options.reasoningLevel !== undefined) {
+      merged.reasoningLevel = this.options.reasoningLevel;
     }
     return merged;
   }
@@ -156,8 +161,75 @@ function toExpoAISession(
     if (temperature !== undefined) req.temperature = temperature;
     const maxOutputTokens = options.maxOutputTokens ?? sessionOptions?.maxOutputTokens;
     if (maxOutputTokens !== undefined) req.maxOutputTokens = maxOutputTokens;
+    if (sessionOptions?.reasoningLevel !== undefined) {
+      req.reasoningLevel = sessionOptions.reasoningLevel;
+    }
     if (options.signal !== undefined) req.signal = options.signal;
     return req;
+  }
+
+  /** A policy narrowed after creation must stop the session from being used. */
+  function guard(): void {
+    if (!isProviderAllowed(session.provider)) {
+      throw new ExpoAIError({
+        code: 'UNAVAILABLE',
+        provider: session.provider,
+        message: `Provider ${session.provider} is no longer permitted by privacy policy.`,
+        fallbackRecommended: false,
+      });
+    }
+  }
+
+  async function generateObjectWithMeta<T = unknown>(
+    options: SessionGenerateObjectOptions,
+  ): Promise<{ object: T; result: GenerateResult }> {
+    guard();
+    // Prefer a non-committing generation so schema/repair scaffolding never
+    // pollutes the transcript: the session's own ephemeral generate (keeps
+    // context), else a one-shot via the underlying adapter (no context, but no
+    // pollution). Only the last resort — session.generate — commits.
+    const ephemeral =
+      session.generateEphemeral?.bind(session) ??
+      (fallbackAdapter ? fallbackAdapter.generate.bind(fallbackAdapter) : undefined);
+    const nonCommitting = Boolean(ephemeral);
+    // Native guided generation never commits: the session's own, else a one-shot.
+    const generateObject =
+      session.generateObject?.bind(session) ??
+      fallbackAdapter?.generateObject?.bind(fallbackAdapter);
+
+    const validated = await generateValidatedObject({
+      provider: session.provider,
+      schema: options.schema,
+      basePrompt: options.prompt,
+      mode: options.structuredOutput ?? 'auto',
+      ...(options.schemaName !== undefined ? { schemaName: options.schemaName } : {}),
+      ...(options.maxRepairAttempts !== undefined
+        ? { maxRepairAttempts: options.maxRepairAttempts }
+        : {}),
+      generateText: (prompt) => {
+        const req = reqFrom({ ...options, prompt });
+        return ephemeral ? ephemeral(req) : session.generate(req);
+      },
+      ...(generateObject
+        ? {
+            nativeObject: () => {
+              // Forward signal/temperature/maxOutputTokens, not just prompt+schema.
+              const req: NormalizedObjectRequest = { ...reqFrom(options), schema: options.schema };
+              if (options.schemaName !== undefined) req.schemaName = options.schemaName;
+              return generateObject(req);
+            },
+          }
+        : {}),
+    });
+
+    // Record exactly one clean turn when generation was non-committing and the
+    // session can record turns. If session.generate was used, turns are already
+    // recorded by it.
+    if (nonCommitting) session.commitTurn?.(options.prompt, validated.raw);
+    return {
+      object: validated.object as T,
+      result: finalizeObjectResult(validated, session.provider, false),
+    };
   }
 
   return {
@@ -165,6 +237,7 @@ function toExpoAISession(
     provider: session.provider,
 
     async generate(options) {
+      guard();
       const result = await session.generate(reqFrom(options));
       return finalizeResult(result, session.provider, false);
     },
@@ -178,51 +251,24 @@ function toExpoAISession(
         startNativeStream: session.stream ? (handlers) => session.stream!(req, handlers) : null,
         generateOnce: () => session.generate(req),
       };
-      return createStreamIterable(source);
+      // Guard lazily so the policy error surfaces from the iterable, like every other error.
+      return {
+        async *[Symbol.asyncIterator]() {
+          guard();
+          yield* createStreamIterable(source);
+        },
+      };
     },
 
+    generateObjectWithMeta,
+
     async generateObject<T = unknown>(options: SessionGenerateObjectOptions): Promise<T> {
-      // Prefer a non-committing generation so schema/repair scaffolding never
-      // pollutes the transcript: the session's own ephemeral generate (keeps
-      // context), else a one-shot via the underlying adapter (no context, but no
-      // pollution). Only the last resort — session.generate — commits.
-      const ephemeral =
-        session.generateEphemeral?.bind(session) ??
-        (fallbackAdapter ? fallbackAdapter.generate.bind(fallbackAdapter) : undefined);
-      const nonCommitting = Boolean(ephemeral);
+      return (await generateObjectWithMeta<T>(options)).object;
+    },
 
-      const runText = async (prompt: string): Promise<string> => {
-        const req = reqFrom({ ...options, prompt });
-        const result = ephemeral ? await ephemeral(req) : await session.generate(req);
-        return result.text;
-      };
-
-      const nativeObject = session.generateObject
-        ? async (): Promise<string> => {
-            // Forward signal/temperature/maxOutputTokens, not just prompt+schema.
-            const req: NormalizedObjectRequest = { ...reqFrom(options), schema: options.schema };
-            if (options.schemaName !== undefined) req.schemaName = options.schemaName;
-            return (await session.generateObject!(req)).text;
-          }
-        : undefined;
-
-      const validated = await generateValidatedObject({
-        provider: session.provider,
-        schema: options.schema,
-        basePrompt: options.prompt,
-        ...(options.schemaName !== undefined ? { schemaName: options.schemaName } : {}),
-        ...(options.maxRepairAttempts !== undefined
-          ? { maxRepairAttempts: options.maxRepairAttempts }
-          : {}),
-        generateText: runText,
-        ...(nativeObject ? { nativeObject } : {}),
-      });
-
-      // Record exactly one clean turn when generation was non-committing and the
-      // session can record turns. If session.generate was used, turns are already
-      // recorded by it.
-      if (nonCommitting) session.commitTurn?.(options.prompt, validated.raw);
-      return validated.object as T;
+    async prewarm(options) {
+      guard();
+      return (await session.prewarm?.(options ?? {})) ?? false;
     },
 
     reset: () => session.reset(),
@@ -231,12 +277,7 @@ function toExpoAISession(
 }
 
 export async function createSession(options: CreateSessionOptions = {}): Promise<ExpoAISession> {
-  const selectOptions: { provider?: ExpoAIProvider; fallback?: CreateSessionOptions['fallback'] } =
-    {};
-  if (options.provider !== undefined) selectOptions.provider = options.provider;
-  if (options.fallback !== undefined) selectOptions.fallback = options.fallback;
-
-  const { adapter } = await selectAvailableAdapter(selectOptions);
+  const { adapter } = await selectAvailableAdapter(options);
 
   const adapterSession = adapter.createSession
     ? await adapter.createSession(options)
