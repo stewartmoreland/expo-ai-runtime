@@ -157,12 +157,13 @@ type ExpoAIProvider =
   | 'cloud'                         // app-controlled cloud fallback
   | 'none';
 
+// Off-device providers (PCC, cloud) are reached only explicitly or with fallback !== 'none'.
+// 'cloud' is not in the list; a registered cloud adapter is appended after it.
 const defaultProviderPriority = [
   'apple-foundation-models',
-  'apple-private-cloud-compute',
   'android-aicore-gemini-nano',
   'litert-lm',
-  'cloud',
+  'apple-private-cloud-compute',
 ];
 
 type ExpoAIFallback = 'none' | 'cloud' | 'any';
