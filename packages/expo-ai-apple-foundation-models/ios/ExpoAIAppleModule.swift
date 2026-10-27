@@ -1,14 +1,9 @@
 import ExpoModulesCore
 
-#if canImport(FoundationModels)
-import FoundationModels
-#endif
-
 /// Expo module exposing primitive Foundation Models operations to JS
-/// (docs/prd.md §9, §10). Ergonomics live in the TypeScript adapter.
+/// (docs/prd.md §9, §10). Ergonomics live in the TypeScript adapter; the
+/// FoundationModels work lives in the adapter/PCC helpers so this stays thin.
 public final class ExpoAIAppleModule: Module {
-  private var streamingTasks: [String: Task<Void, Never>] = [:]
-
   public func definition() -> ModuleDefinition {
     Name("ExpoAIApple")
 
@@ -18,32 +13,20 @@ public final class ExpoAIAppleModule: Module {
       AppleFoundationModelsAdapter.availability()
     }
 
-    AsyncFunction("generate") { (options: [String: Any]) async throws -> [String: Any] in
-      #if canImport(FoundationModels)
-      if #available(iOS 26.0, macOS 26.0, *) {
-        return try await AppleFoundationModelsAdapter.generate(options)
-      }
-      #endif
-      throw ExpoAIAppleError.unsupportedOS
+    AsyncFunction("generate") { (options: [String: Any]) async -> [String: Any] in
+      await AppleFoundationModelsAdapter.generate(options)
+    }
+
+    AsyncFunction("generateObject") { (options: [String: Any]) async -> [String: Any] in
+      await AppleFoundationModelsAdapter.generateObject(options)
     }
 
     AsyncFunction("createSession") { (options: [String: Any]) throws -> [String: Any] in
-      #if canImport(FoundationModels)
-      if #available(iOS 26.0, macOS 26.0, *) {
-        let id = AppleSessionStore.shared.create(instructions: options["instructions"] as? String)
-        return ["sessionId": id, "provider": AppleFoundationModelsAdapter.provider]
-      }
-      #endif
-      throw ExpoAIAppleError.unsupportedOS
+      try AppleFoundationModelsAdapter.createSession(options)
     }
 
-    AsyncFunction("generateInSession") { (sessionId: String, options: [String: Any]) async throws -> [String: Any] in
-      #if canImport(FoundationModels)
-      if #available(iOS 26.0, macOS 26.0, *) {
-        return try await AppleFoundationModelsAdapter.generate(inSession: sessionId, options: options)
-      }
-      #endif
-      throw ExpoAIAppleError.unsupportedOS
+    AsyncFunction("generateInSession") { (sessionId: String, options: [String: Any]) async -> [String: Any] in
+      await AppleFoundationModelsAdapter.generate(inSession: sessionId, options: options)
     }
 
     AsyncFunction("resetSession") { (sessionId: String) in
@@ -62,75 +45,42 @@ public final class ExpoAIAppleModule: Module {
       #endif
     }
 
-    AsyncFunction("startStreaming") { (requestId: String, options: [String: Any]) in
-      self.startStreaming(requestId: requestId, options: options)
+    AsyncFunction("startStreaming") { [weak self] (requestId: String, options: [String: Any]) in
+      AppleFoundationModelsAdapter.startStreaming(requestId: requestId, options: options) { event in
+        self?.sendEvent("onExpoAIStream", event)
+      }
     }
 
     AsyncFunction("cancelStreaming") { (requestId: String) in
-      self.streamingTasks[requestId]?.cancel()
-      self.streamingTasks[requestId] = nil
+      AppleTaskRegistry.shared.cancel(requestId)
     }
-  }
 
-  private func startStreaming(requestId: String, options: [String: Any]) {
-    #if canImport(FoundationModels)
-    if #available(iOS 26.0, macOS 26.0, *) {
-      let task = Task { [weak self] in
-        guard let self else { return }
-        do {
-          let session = LanguageModelSession(
-            instructions: options["instructions"] as? String
-              ?? AppleFoundationModelsAdapter.defaultInstructions
-          )
-          self.sendEvent("onExpoAIStream", ["requestId": requestId, "type": "start"])
-
-          var last = ""
-          let stream = session.streamResponse(
-            to: options["prompt"] as? String ?? "",
-            options: AppleFoundationModelsAdapter.makeGenerationOptions(options)
-          )
-          // Foundation Models streams *cumulative* snapshots; emit the delta.
-          for try await partial in stream {
-            if Task.isCancelled { break }
-            let snapshot = partial.content
-            if snapshot.count >= last.count {
-              let delta = String(snapshot.dropFirst(last.count))
-              last = snapshot
-              if !delta.isEmpty {
-                self.sendEvent("onExpoAIStream", ["requestId": requestId, "type": "token", "text": delta])
-              }
-            }
-          }
-
-          if !Task.isCancelled {
-            self.sendEvent("onExpoAIStream", [
-              "requestId": requestId,
-              "type": "done",
-              "result": ["text": last, "finishReason": "stop"],
-            ])
-          }
-        } catch {
-          self.sendEvent("onExpoAIStream", [
-            "requestId": requestId,
-            "type": "error",
-            "error": AppleErrorMapper.payload(for: error),
-          ])
-        }
-        self.streamingTasks[requestId] = nil
-      }
-      self.streamingTasks[requestId] = task
-      return
+    AsyncFunction("cancel") { (requestId: String) in
+      AppleTaskRegistry.shared.cancel(requestId)
     }
-    #endif
 
-    self.sendEvent("onExpoAIStream", [
-      "requestId": requestId,
-      "type": "error",
-      "error": [
-        "code": "UNSUPPORTED_DEVICE",
-        "provider": AppleFoundationModelsAdapter.provider,
-        "message": "Apple Foundation Models requires iOS 26+",
-      ],
-    ])
+    AsyncFunction("prewarm") { (options: [String: Any]) async -> Bool in
+      await AppleFoundationModelsAdapter.prewarm(options)
+    }
+
+    AsyncFunction("prewarmSession") { (sessionId: String, options: [String: Any]) -> Bool in
+      AppleFoundationModelsAdapter.prewarmSession(sessionId, options: options)
+    }
+
+    AsyncFunction("countTokens") { (text: String) async -> Int? in
+      await AppleFoundationModelsAdapter.countTokens(text)
+    }
+
+    AsyncFunction("getPCCAvailability") { () async -> [String: Any] in
+      await ApplePrivateCloudCompute.availability()
+    }
+
+    AsyncFunction("getPCCQuota") { () -> [String: Any]? in
+      ApplePrivateCloudCompute.quota()
+    }
+
+    AsyncFunction("showPCCLimitIncrease") { () async -> Bool in
+      await ApplePrivateCloudCompute.showLimitIncrease()
+    }
   }
 }

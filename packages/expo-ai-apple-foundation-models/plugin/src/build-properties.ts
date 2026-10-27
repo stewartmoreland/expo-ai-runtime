@@ -34,3 +34,23 @@ export function applyIosDeploymentTarget(
   properties['ios.deploymentTarget'] = atLeastVersion(properties['ios.deploymentTarget'], minimum);
   return properties;
 }
+
+/** Entitlement that unlocks Apple Private Cloud Compute. UNVERIFIED key — confirm against the iOS 27 SDK. */
+export const PCC_ENTITLEMENT = 'com.apple.developer.private-cloud-compute';
+
+/** Info.plist marker the Swift module reads before touching PCC. */
+export const PCC_INFO_PLIST_KEY = 'ExpoAIPrivateCloudCompute';
+
+/** Add the PCC entitlement. Mutates and returns the entitlements plist. */
+export function applyPrivateCloudCompute(
+  entitlements: Record<string, unknown>,
+): Record<string, unknown> {
+  entitlements[PCC_ENTITLEMENT] = true;
+  return entitlements;
+}
+
+/** Add the PCC Info.plist marker. Mutates and returns the Info.plist. */
+export function applyPCCInfoPlist(plist: Record<string, unknown>): Record<string, unknown> {
+  plist[PCC_INFO_PLIST_KEY] = true;
+  return plist;
+}
