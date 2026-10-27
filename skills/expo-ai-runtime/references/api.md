@@ -54,7 +54,7 @@ type GenerateOptions = {
   instructions?: string;         // system / role instructions
   temperature?: number;
   maxOutputTokens?: number;
-  sensitive?: boolean;           // true ⇒ router refuses third-party cloud (see Privacy)
+  sensitive?: boolean;           // true ⇒ third-party cloud skipped unless fallback/provider is 'cloud' (see Privacy)
   model?: LocalModelConfig;      // BYOM descriptor (LiteRT-LM; future)
   metadata?: Record<string, string>;
   signal?: AbortSignal;          // cancels native + cloud streaming
@@ -193,8 +193,11 @@ privacyModeForProvider(provider): ExpoAIPrivacyMode;
 providerSendsPromptOffDevice(provider): boolean;
 ```
 
-Rule: a `sensitive: true` prompt is never routed to `cloud` (third-party). On-device providers
-and `apple-private-cloud-compute` remain eligible.
+Rule: a `sensitive: true` prompt reaches `cloud` (third-party) only by explicit opt-in:
+`fallback: 'cloud'` or `provider: 'cloud'`. With `fallback: 'any'` it is skipped. On-device
+providers and `apple-private-cloud-compute` remain eligible. For a hard block no request can
+override, use `setPrivacyPolicy` (`allowedModes` / `allowedProviders`; `sensitiveByDefault`
+marks every request sensitive).
 
 ## JSON schema subset
 
@@ -266,6 +269,7 @@ class ExpoAIError extends Error {
   retryable: boolean;
   fallbackRecommended: boolean;
   nativeMessage?: string;
+  detail?: string;               // refusal explanation, unsupported schema keyword, quota reset…
   static from(value: unknown, provider: ExpoAIProvider): ExpoAIError;
   toJSON(): { code, provider, message, retryable, fallbackRecommended, nativeMessage };
 }
@@ -287,7 +291,22 @@ Default routing semantics per code (override via constructor params if needed):
 | `CANCELLED` | no | no | Aborted via `signal`. Treat as intentional, not an error UI. |
 | `TIMEOUT` | **yes** | yes | Timed out. |
 | `NATIVE_PROVIDER_ERROR` | no | yes | Underlying native/cloud error. |
+| `QUOTA_EXHAUSTED` | no | **no** | Provider quota used up (e.g. Apple PCC); `detail` may carry the reset date. |
+| `NETWORK_UNAVAILABLE` | **yes** | **no** | Request never reached the server (offline, DNS, TLS). |
+| `SERVICE_UNAVAILABLE` | **yes** | **no** | Backend temporarily down (HTTP 503, PCC outage). |
+| `ENTITLEMENT_MISSING` | no | **no** | App lacks the required entitlement (e.g. PCC). |
+| `REFUSAL` | no | **no** | Model refused; `detail` carries its explanation. |
+| `UNSUPPORTED_SCHEMA` | no | **no** | Schema can't be natively guided; `detail` names the keyword. |
+| `UNSUPPORTED_LOCALE` | no | **no** | Device/model locale not supported. |
+| `TOOL_ERROR` | **yes** | **no** | A tool call failed. |
+| `CONCURRENT_REQUEST` | **yes** | **no** | Provider is busy with another request. |
+| `BACKGROUND_NOT_ALLOWED` | **yes** | **no** | Provider can't run while the app is backgrounded. |
 | `UNKNOWN` | no | yes | Unclassified. |
+
+`fallbackRecommended: false` only stops re-routing for an error *thrown* during generation. A
+provider that reports itself unavailable up front (e.g. PCC `quota_exhausted`,
+`unsupported_locale`, `entitlement_missing`) is skipped like any other unavailable provider when
+`fallback` allows another candidate; its code is what you get when none succeeds.
 
 `isExpoAIErrorCode(value)` is exported for guarding raw payloads.
 
@@ -327,8 +346,10 @@ POST {streamPath}    ->  SSE frames: data: {"type":"delta","text":"…"}
 ```
 
 HTTP status → error code mapping on non-2xx: 429→`RATE_LIMITED`, 400/422→`INVALID_PROMPT`,
-408/504→`TIMEOUT`, 413→`CONTEXT_WINDOW_EXCEEDED`, else→`NATIVE_PROVIDER_ERROR`. A backend may also
-return `{ "code": "<ExpoAIErrorCode>", ... }` to set the code directly.
+408/504→`TIMEOUT`, 413→`CONTEXT_WINDOW_EXCEEDED`, 503→`SERVICE_UNAVAILABLE`,
+else→`NATIVE_PROVIDER_ERROR`. A `fetch` that never reaches the server (TypeError) →
+`NETWORK_UNAVAILABLE`. A backend may also return `{ "code": "<ExpoAIErrorCode>", ... }` to set
+the code directly.
 
 ## React hooks
 
@@ -337,6 +358,7 @@ cancellation as `error`.
 
 ```ts
 // providers is ExpoAIProviderInfo[] | null — read availability off p.capabilities (see above).
+// Re-queries automatically on every ExpoAI.onAvailabilityChange.
 useCapabilities(): { capabilities, availability, providers, loading, error, refresh() }
 
 useGenerate(): {
@@ -346,8 +368,8 @@ useGenerate(): {
 }
 
 useObject<T>(): {
-  submit(options: StreamObjectOptions): Promise<T | undefined>;
-  object: DeepPartial<T> | null; isLoading; error; stop(); reset();
+  submit(options: StreamObjectOptions): Promise<{ object: T; result: GenerateResult } | undefined>;
+  object: DeepPartial<T> | null; result: GenerateResult | null; isLoading; error; stop(); reset();
 }
 
 useChat(options?: CreateSessionOptions): {

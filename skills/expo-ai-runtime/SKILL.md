@@ -106,9 +106,12 @@ treat cancellation as intentional (never an `error`).
 - **Cloud is opt-in.** With the default `fallback: 'none'`, a request only uses on-device
   providers and fails if none is available. To allow the cloud, pass `fallback: 'cloud'` (or
   `'any'`). Decide this per request.
-- **Never leak sensitive prompts.** Set `sensitive: true` on a prompt that must not leave the
-  device. The router then refuses any third-party cloud provider for that request, even if
-  fallback is enabled (on-device and Apple Private Cloud Compute are still allowed).
+- **Never leak sensitive prompts.** Set `sensitive: true` on a prompt that must not go to a
+  third-party cloud. With `fallback: 'any'` the router then skips third-party cloud for that
+  request (on-device and Apple Private Cloud Compute are still allowed). `sensitive` does
+  **not** override an explicit opt-in: `fallback: 'cloud'` or `provider: 'cloud'` still sends
+  the prompt to the cloud, so never pair them with a sensitive prompt. For a hard, app-wide
+  block use `setPrivacyPolicy({ allowedModes: ['on-device', 'apple-private-cloud-compute'], ... })`.
 - **Every result is self-describing.** `GenerateResult` carries `provider`, `usedFallback`, and a
   `privacy` block (`isOnDevice`, `sendsPromptOffDevice`, `privacyMode`). Surface this in the UI —
   e.g. a badge that tells the user whether their text stayed on the device. Use `PRIVACY_COPY` /

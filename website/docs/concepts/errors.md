@@ -87,7 +87,10 @@ When a native module sends only a `code`, these defaults supply the flags.
 | `BACKGROUND_NOT_ALLOWED`  | yes       | no                   |
 | `UNKNOWN`                 | no        | yes                  |
 
-The new codes never recommend fallback, so a refusal, quota or network failure is never
-silently re-routed to another provider. An unavailable provider whose reason is
-`unsupported_locale`, `quota_exhausted` or `entitlement_missing` reports the matching
-code instead of `UNAVAILABLE`.
+The new codes never recommend fallback, so a refusal, quota or network failure _thrown
+during generation_ is never re-routed to another provider. A provider that is already
+reported unavailable is different: one whose reason is `unsupported_locale`,
+`quota_exhausted` or `entitlement_missing` is skipped like any other unavailable provider,
+and the router moves on to the next candidate your `fallback` allows (the result then has
+`usedFallback: true`). If no candidate serves the request, it fails with the matching code
+instead of `UNAVAILABLE`. Use `fallback: 'none'` if such a provider must not be replaced.

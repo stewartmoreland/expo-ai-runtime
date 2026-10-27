@@ -96,8 +96,10 @@ const result = await ExpoAI.generate({
 result.privacy.privacyMode; // 'apple-private-cloud-compute'
 ```
 
-PCC has a usage quota. When it runs out, availability reports `quota_exhausted` and
-requests fail with `QUOTA_EXHAUSTED`.
+PCC has a usage quota. When it runs out, availability reports `quota_exhausted`. With
+`fallback: 'none'` requests then fail with `QUOTA_EXHAUSTED`. With another `fallback` the
+router skips PCC and tries the next allowed provider, as it does for any unavailable
+provider.
 
 ```ts
 import { getPCCQuota, showPCCLimitIncrease } from '@stewmore/expo-ai-apple-foundation-models';
@@ -111,4 +113,5 @@ if (quota?.status === 'limit_reached' && quota.canRequestLimitIncrease) {
 ```
 
 PCC-specific errors: `QUOTA_EXHAUSTED`, `NETWORK_UNAVAILABLE`, `SERVICE_UNAVAILABLE`, and
-`ENTITLEMENT_MISSING`. None of them recommend fallback.
+`ENTITLEMENT_MISSING`. None of them recommend fallback: thrown mid-request, they stop
+routing. A quota or entitlement problem caught at the availability check only skips PCC.

@@ -27,7 +27,7 @@ npm install            # install workspace
 npm test               # unit tests (core, cloud, evals) — vitest
 npm run typecheck      # tsc --noEmit per package
 npm run build          # build all packages
-npm run eval           # eval harness (needs the reference server in mock mode, or uses the mock adapter)
+npm run eval           # eval harness, on-device mock only (add `-- --providers apple-foundation-models,cloud --fallback cloud`; ENDPOINT=<reference server> for real cloud)
 npm run server         # start reference cloud backend (mock mode, no API keys needed)
 ```
 

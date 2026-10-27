@@ -62,7 +62,9 @@ npm install                 # install the whole workspace
 npm test                    # run unit tests (core, cloud, evals)
 npm run typecheck           # type-check all packages
 npm run build               # build all packages
-npm run eval                # run the eval harness against the mock cloud + a mock adapter
+npm run eval                # run the eval harness against a mock on-device adapter (no cloud)
+npm run eval -- --providers apple-foundation-models,cloud --fallback cloud
+                            # add cloud: a cloud mock, or the reference server if ENDPOINT is set
 npm run server              # start the reference cloud backend (mock mode)
 ```
 

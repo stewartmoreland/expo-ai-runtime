@@ -218,9 +218,16 @@ await ExpoAI.generate({ prompt });
 // Allow cloud when no local provider is available:
 await ExpoAI.generate({ prompt, fallback: 'cloud' });
 
-// A prompt that must never leave the device: even with fallback enabled, the router
-// refuses third-party cloud for this request (on-device / Apple PCC still allowed).
-await ExpoAI.generate({ prompt: diaryEntry, sensitive: true, fallback: 'cloud' });
+// A sensitive prompt: with fallback 'any' the router skips third-party cloud for this
+// request (on-device / Apple PCC still allowed). fallback: 'cloud' or provider: 'cloud'
+// WOULD send it to the cloud: they are an explicit opt-in that `sensitive` does not override.
+await ExpoAI.generate({ prompt: diaryEntry, sensitive: true, fallback: 'any' });
+
+// Hard, app-wide block that no request can override (import from @stewmore/expo-ai-core):
+setPrivacyPolicy({
+  allowedModes: ['on-device', 'apple-private-cloud-compute'],
+  allowedProviders: ['apple-foundation-models', 'apple-private-cloud-compute', 'android-aicore-gemini-nano'],
+});
 ```
 
 Surface the outcome so the user is never surprised about where their data went. Branch on the
