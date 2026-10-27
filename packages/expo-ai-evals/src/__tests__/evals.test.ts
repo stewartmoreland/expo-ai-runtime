@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { clearAdapters, registerAdapter, type JSONSchema } from '@stewmore/expo-ai-core';
+import {
+  ExpoAIError,
+  clearAdapters,
+  registerAdapter,
+  type JSONSchema,
+} from '@stewmore/expo-ai-core';
 import { createMockAdapter } from '@stewmore/expo-ai-core/testing';
 
 import { runEvalSuite, scoreSchemaValidity } from '../index.js';
@@ -47,5 +52,26 @@ describe('runEvalSuite', () => {
     const privacy = suite.results.find((r) => r.testName === 'privacy');
     expect(privacy?.passed).toBe(true);
     expect(privacy?.errorCode).toBe('UNAVAILABLE');
+  });
+
+  it("defaults to fallback 'none': a failing on-device case does not reach cloud", async () => {
+    registerAdapter(
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        throwError: new ExpoAIError({
+          code: 'MODEL_NOT_READY',
+          provider: 'apple-foundation-models',
+          fallbackRecommended: true,
+        }),
+      }),
+    );
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'cloud reply' }));
+
+    const suite = await runEvalSuite([
+      { name: 'default', kind: 'generate', prompt: 'hi' },
+      { name: 'opt-in', kind: 'generate', prompt: 'hi', fallback: 'cloud' },
+    ]);
+    expect(suite.results[0]).toMatchObject({ passed: false, errorCode: 'MODEL_NOT_READY' });
+    expect(suite.results[1]).toMatchObject({ passed: true, provider: 'cloud', usedFallback: true });
   });
 });

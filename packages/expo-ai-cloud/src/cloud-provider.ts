@@ -145,6 +145,21 @@ export class CloudAdapter implements ExpoAIAdapter {
     return `${this.config.endpoint.replace(/\/$/, '')}${path}`;
   }
 
+  /** `fetch` rejects with a TypeError when the request never reaches the server. */
+  private async send(path: string, init: RequestInit): Promise<Response> {
+    try {
+      return await this.fetchImpl(this.url(path), init);
+    } catch (error) {
+      if (!(error instanceof TypeError)) throw error;
+      throw new ExpoAIError({
+        code: 'NETWORK_UNAVAILABLE',
+        provider: PROVIDER,
+        nativeMessage: error.message,
+        cause: error,
+      });
+    }
+  }
+
   private headers(): Record<string, string> {
     return { 'content-type': 'application/json', ...this.config.headers };
   }
@@ -162,7 +177,7 @@ export class CloudAdapter implements ExpoAIAdapter {
     payload: WirePayload,
     signal?: AbortSignal,
   ): Promise<AdapterGenerateResult> {
-    const res = await this.fetchImpl(this.url(this.generatePath), {
+    const res = await this.send(this.generatePath, {
       method: 'POST',
       headers: this.headers(),
       body: JSON.stringify(payload),
@@ -185,7 +200,7 @@ export class CloudAdapter implements ExpoAIAdapter {
     handlers: AdapterStreamHandlers,
     controller: AbortController,
   ): Promise<void> {
-    const res = await this.fetchImpl(this.url(this.streamPath), {
+    const res = await this.send(this.streamPath, {
       method: 'POST',
       headers: { ...this.headers(), accept: 'text/event-stream' },
       body: JSON.stringify(this.payload(req)),
@@ -336,5 +351,6 @@ function statusToCode(status: number): ExpoAIErrorPayload['code'] {
   if (status === 400 || status === 422) return 'INVALID_PROMPT';
   if (status === 408 || status === 504) return 'TIMEOUT';
   if (status === 413) return 'CONTEXT_WINDOW_EXCEEDED';
+  if (status === 503) return 'SERVICE_UNAVAILABLE';
   return 'NATIVE_PROVIDER_ERROR';
 }

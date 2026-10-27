@@ -20,6 +20,9 @@ import type { RewriteStyle } from '@stewmore/expo-ai-core';
 import { scoreSchemaValidity } from './scoreSchemaValidity.js';
 import type { EvalCase, EvalResult, EvalSuiteResult } from './types.js';
 
+/** On-device only unless a case (or the CLI's `--fallback`) opts into off-device fallback. */
+const DEFAULT_FALLBACK = 'none' as const;
+
 function elapsed(start: number): number {
   return Math.round((performance.now() - start) * 100) / 100;
 }
@@ -40,7 +43,7 @@ export async function runEvalCase(testCase: EvalCase): Promise<EvalResult> {
         const meta = await routeGenerateObjectWithMeta({
           prompt: testCase.prompt ?? '',
           schema: testCase.schema,
-          fallback: testCase.fallback ?? 'cloud',
+          fallback: testCase.fallback ?? DEFAULT_FALLBACK,
           ...(testCase.provider ? { provider: testCase.provider } : {}),
         });
         const schemaValid = scoreSchemaValidity(meta.object, testCase.schema);
@@ -57,7 +60,7 @@ export async function runEvalCase(testCase: EvalCase): Promise<EvalResult> {
       case 'summarize': {
         const result = await ExpoAI.summarize({
           text: testCase.text ?? '',
-          fallback: testCase.fallback ?? 'cloud',
+          fallback: testCase.fallback ?? DEFAULT_FALLBACK,
           ...(testCase.provider ? { provider: testCase.provider } : {}),
           ...(testCase.length ? { length: testCase.length } : {}),
         });
@@ -67,7 +70,7 @@ export async function runEvalCase(testCase: EvalCase): Promise<EvalResult> {
       case 'rewrite': {
         const result = await ExpoAI.rewrite({
           text: testCase.text ?? '',
-          fallback: testCase.fallback ?? 'cloud',
+          fallback: testCase.fallback ?? DEFAULT_FALLBACK,
           ...(testCase.provider ? { provider: testCase.provider } : {}),
           ...(testCase.style ? { style: testCase.style as RewriteStyle } : {}),
         });
@@ -77,7 +80,7 @@ export async function runEvalCase(testCase: EvalCase): Promise<EvalResult> {
       case 'proofread': {
         const result = await ExpoAI.proofread({
           text: testCase.text ?? '',
-          fallback: testCase.fallback ?? 'cloud',
+          fallback: testCase.fallback ?? DEFAULT_FALLBACK,
           ...(testCase.provider ? { provider: testCase.provider } : {}),
         });
         return functionalResult(testCase, result.provider, result.text, result.usedFallback, start);
@@ -90,7 +93,7 @@ export async function runEvalCase(testCase: EvalCase): Promise<EvalResult> {
       default: {
         const result = await ExpoAI.generate({
           prompt: testCase.prompt ?? '',
-          fallback: testCase.fallback ?? 'cloud',
+          fallback: testCase.fallback ?? DEFAULT_FALLBACK,
           ...(testCase.provider ? { provider: testCase.provider } : {}),
           ...(testCase.sensitive ? { sensitive: true } : {}),
         });

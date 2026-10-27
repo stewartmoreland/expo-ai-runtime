@@ -38,10 +38,18 @@
     "eval": "tsx src/cli.ts"
   },
   "dependencies": {
-    "@stewmore/expo-ai-cloud": "^0.7.2",
     "@stewmore/expo-ai-core": "^0.7.2"
   },
+  "peerDependencies": {
+    "@stewmore/expo-ai-cloud": "^0.7.2"
+  },
+  "peerDependenciesMeta": {
+    "@stewmore/expo-ai-cloud": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@stewmore/expo-ai-cloud": "^0.7.2",
     "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "^4.1.9",
     "tsx": "^4.19.2",
