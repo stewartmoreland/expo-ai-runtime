@@ -89,13 +89,16 @@ enum AppleFoundationModelsAdapter {
     #if canImport(FoundationModels)
     if #available(iOS 26.0, macOS 26.0, *) {
       let entry = AppleSessionStore.shared.entry(for: id)
-      return await run(options, provider: providerName(for: entry?.model)) {
+      // A missing entry falls back to the caller's `model` (the PCC wrapper sends "pcc").
+      return await run(options, provider: providerName(for: entry?.model ?? options["model"] as? String)) {
         guard let entry else { throw ExpoAIAppleError.sessionNotFound }
         return try await respond(session: entry.session, model: entry.model, options: options)
       }
     }
     #endif
-    return await run(options, provider: provider) { throw ExpoAIAppleError.unsupportedOS }
+    return await run(options, provider: providerName(for: options["model"] as? String)) {
+      throw ExpoAIAppleError.unsupportedOS
+    }
   }
 
   /// Guided generation: `schemaJson` → `GenerationSchema`; `text` is the JSON string.

@@ -67,7 +67,7 @@ function pccNative(n: AppleNativeModule): NativeStreamingModule {
     generate: (options) => n.generate(pcc(options)),
     generateObject: (options) => n.generateObject!(pcc(options)),
     createSession: (options) => n.createSession!(pcc(options)),
-    generateInSession: (sessionId, options) => n.generateInSession!(sessionId, options),
+    generateInSession: (sessionId, options) => n.generateInSession!(sessionId, pcc(options)),
     resetSession: (sessionId) => n.resetSession!(sessionId),
     disposeSession: (sessionId) => n.disposeSession!(sessionId),
     startStreaming: (requestId, options) => n.startStreaming(requestId, pcc(options)),
@@ -114,7 +114,10 @@ if (ios && NativeApple) {
   });
 }
 
-/** Token count for `text` with the on-device model, or null where unsupported (below iOS 26.4). */
+/**
+ * Token count for `text` with the on-device model, or null where unsupported: below
+ * iOS 26.4, or in an app built with a pre-iOS 27 SDK (Xcode 26.x) on any iOS version.
+ */
 export async function countTokens(text: string): Promise<number | null> {
   return (await NativeApple?.countTokens?.(text)) ?? null;
 }

@@ -4,8 +4,9 @@ import Foundation
 import FoundationModels
 
 /// Converts the JSON Schema subset Apple guided generation can honour into a
-/// `GenerationSchema`. Anything outside the subset throws `unsupportedSchema`
-/// (→ `UNSUPPORTED_SCHEMA`), and core's `'auto'` mode retries emulated.
+/// `GenerationSchema`. The denylisted keywords below (and bad `type` / `enum` /
+/// `additionalProperties`) throw `unsupportedSchema` (→ `UNSUPPORTED_SCHEMA`), and
+/// core's `'auto'` mode retries emulated. Other unknown keywords are ignored.
 @available(iOS 26.0, macOS 26.0, *)
 enum AppleSchema {
   static let unsupportedKeywords = [

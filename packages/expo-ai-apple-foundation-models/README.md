@@ -57,7 +57,8 @@ On unsupported OS/devices the adapter reports `available: false` with a reason
 (`unsupported_os_version`, `unsupported_device`, `apple_intelligence_disabled`,
 `model_initializing`, `unsupported_locale`), so the runtime can fall back per the app's
 policy. Availability also reports `supportedLanguages` and the model's real
-`contextWindow`, and is re-checked when the app returns to the foreground.
+`contextWindow` (only in apps built with the iOS 27 SDK, Xcode 27+), and is re-checked
+when the app returns to the foreground.
 
 ## What it maps
 
@@ -75,12 +76,17 @@ policy. Availability also reports `supportedLanguages` and the model's real
 
 Guided generation supports a JSON Schema subset: an object root; `string` (optionally
 with a string `enum`), `integer` / `number` (`minimum` / `maximum`), `boolean`, `array`
-(`items`, `minItems`, `maxItems`), nested objects, `required`, and `description`. Other
-keywords fail with `UNSUPPORTED_SCHEMA`, and with the default
-`structuredOutput: 'auto'` the runtime falls back to the JSON prompt. Summarize, rewrite,
+(`items`, `minItems`, `maxItems`), nested objects, `required`, and `description`.
+Unsupported keywords (`$ref`, `anyOf`/`oneOf`/`allOf`, `nullable`, `const`, `pattern`,
+`format`, `minLength`/`maxLength`, `multipleOf`, exclusive bounds, `uniqueItems`,
+`patternProperties`, `additionalProperties` other than `false`) fail with
+`UNSUPPORTED_SCHEMA`, and with the default `structuredOutput: 'auto'` the runtime falls
+back to the JSON prompt. Other unknown keywords are ignored. Summarize, rewrite,
 and proofread are provided by the core runtime over `generate`.
 
 `countTokens(text)` returns the on-device token count, or `null` below iOS 26.4.
+`countTokens` and `contextWindow` need an app built with the iOS 27 SDK (Xcode 27+):
+builds from Xcode 26.x return `null` and omit `contextWindow`, even on iOS 26.4+.
 
 ## Private Cloud Compute
 
