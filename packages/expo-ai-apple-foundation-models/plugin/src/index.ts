@@ -6,16 +6,30 @@
  * so `expo prebuild` produces a project whose pod installs cleanly without the
  * app author hand-editing `expo-build-properties`.
  *
- * FoundationModels usage is gated to iOS 26 at runtime (`if #available`), so no
- * entitlement is required and the pod weak-links the framework; the floor below
- * only guards against a deployment target lower than the pod itself supports.
+ * FoundationModels usage is gated to iOS 26 at runtime (`if #available`) and the
+ * pod weak-links the framework; the floor below only guards against a deployment
+ * target lower than the pod itself supports. On-device generation needs no
+ * entitlement; the Private Cloud Compute entitlement and Info.plist marker are
+ * added only when `privateCloudCompute: true`.
  */
-import { type ConfigPlugin, createRunOncePlugin, withPodfileProperties } from 'expo/config-plugins';
+import {
+  type ConfigPlugin,
+  createRunOncePlugin,
+  withEntitlementsPlist,
+  withInfoPlist,
+  withPodfileProperties,
+} from 'expo/config-plugins';
 
-import { applyIosDeploymentTarget } from './build-properties';
+import {
+  applyIosDeploymentTarget,
+  applyPCCInfoPlist,
+  applyPrivateCloudCompute,
+} from './build-properties';
 
 const PACKAGE_NAME = '@stewmore/expo-ai-apple-foundation-models';
-const PACKAGE_VERSION = '0.1.0';
+// CommonJS at runtime (plugin/package.json); declared here so the plugin needs no @types/node.
+declare const require: (id: string) => { version: string };
+export const PACKAGE_VERSION: string = require('../../package.json').version;
 
 /** The pod's deployment-target floor (see ExpoAIApple.podspec). */
 export const DEFAULT_IOS_DEPLOYMENT_TARGET = '15.1';
@@ -23,6 +37,8 @@ export const DEFAULT_IOS_DEPLOYMENT_TARGET = '15.1';
 export type AppleFoundationModelsPluginProps = {
   /** Minimum iOS deployment target to enforce. Defaults to the pod floor (15.1). */
   iosDeploymentTarget?: string;
+  /** Opt in to Apple Private Cloud Compute: adds its entitlement and Info.plist marker. */
+  privateCloudCompute?: boolean;
 };
 
 const withAppleFoundationModels: ConfigPlugin<AppleFoundationModelsPluginProps | void> = (
@@ -30,12 +46,29 @@ const withAppleFoundationModels: ConfigPlugin<AppleFoundationModelsPluginProps |
   props,
 ) => {
   const minimum = props?.iosDeploymentTarget ?? DEFAULT_IOS_DEPLOYMENT_TARGET;
-  return withPodfileProperties(config, (cfg) => {
+  config = withPodfileProperties(config, (cfg) => {
     cfg.modResults = applyIosDeploymentTarget(cfg.modResults, minimum);
+    return cfg;
+  });
+  if (!props?.privateCloudCompute) return config;
+  config = withEntitlementsPlist(config, (cfg) => {
+    applyPrivateCloudCompute(cfg.modResults);
+    return cfg;
+  });
+  return withInfoPlist(config, (cfg) => {
+    applyPCCInfoPlist(cfg.modResults);
     return cfg;
   });
 };
 
-export { applyIosDeploymentTarget, atLeastVersion, compareVersions } from './build-properties';
+export {
+  PCC_ENTITLEMENT,
+  PCC_INFO_PLIST_KEY,
+  applyIosDeploymentTarget,
+  applyPCCInfoPlist,
+  applyPrivateCloudCompute,
+  atLeastVersion,
+  compareVersions,
+} from './build-properties';
 
 export default createRunOncePlugin(withAppleFoundationModels, PACKAGE_NAME, PACKAGE_VERSION);

@@ -1,11 +1,50 @@
 import { describe, expect, it } from 'vitest';
 
+import pkg from '../../../package.json';
 import {
+  PCC_ENTITLEMENT,
+  PCC_INFO_PLIST_KEY,
   applyIosDeploymentTarget,
+  applyPCCInfoPlist,
+  applyPrivateCloudCompute,
   atLeastVersion,
   compareVersions,
 } from '../build-properties.js';
-import { DEFAULT_IOS_DEPLOYMENT_TARGET } from '../index.js';
+import withAppleFoundationModels, {
+  DEFAULT_IOS_DEPLOYMENT_TARGET,
+  PACKAGE_VERSION,
+} from '../index.js';
+
+describe('PACKAGE_VERSION', () => {
+  it('matches package.json', () => {
+    expect(PACKAGE_VERSION).toBe(pkg.version);
+  });
+});
+
+describe('Private Cloud Compute', () => {
+  it('sets the entitlement and keeps other keys', () => {
+    const entitlements: Record<string, unknown> = { 'aps-environment': 'production' };
+    applyPrivateCloudCompute(entitlements);
+    applyPrivateCloudCompute(entitlements);
+    expect(entitlements).toEqual({ 'aps-environment': 'production', [PCC_ENTITLEMENT]: true });
+  });
+
+  it('sets the Info.plist marker', () => {
+    const plist: Record<string, unknown> = {};
+    applyPCCInfoPlist(applyPCCInfoPlist(plist));
+    expect(plist).toEqual({ [PCC_INFO_PLIST_KEY]: true });
+  });
+
+  it('registers the entitlement and Info.plist mods only on opt-in', () => {
+    const base = () => ({ name: 'app', slug: 'app' });
+    const off = withAppleFoundationModels(base(), { privateCloudCompute: false });
+    expect(off.mods?.ios?.entitlements).toBeUndefined();
+    expect(off.mods?.ios?.infoPlist).toBeUndefined();
+    const on = withAppleFoundationModels(base(), { privateCloudCompute: true });
+    expect(on.mods?.ios?.entitlements).toBeTypeOf('function');
+    expect(on.mods?.ios?.infoPlist).toBeTypeOf('function');
+  });
+});
 
 describe('compareVersions', () => {
   it('orders by major then minor', () => {
