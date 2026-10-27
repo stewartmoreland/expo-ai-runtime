@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ExpoAI, clearAdapters, type GenerateChunk } from '@stewmore/expo-ai-core';
+import {
+  ExpoAI,
+  ExpoAIError,
+  clearAdapters,
+  registerAdapter,
+  type GenerateChunk,
+} from '@stewmore/expo-ai-core';
+import { createMockAdapter } from '@stewmore/expo-ai-core/testing';
 
 import { configureCloud } from '../index.js';
 
@@ -167,6 +174,57 @@ describe('CloudAdapter via ExpoAI', () => {
       code: 'RATE_LIMITED',
       retryable: true,
     });
+  });
+
+  it('maps a 503 response to SERVICE_UNAVAILABLE', async () => {
+    configureCloud({
+      endpoint: 'http://x',
+      fetch: (async () => jsonResponse({}, 503)) as unknown as typeof fetch,
+    });
+    await expect(ExpoAI.generate({ prompt: 'hi', provider: 'cloud' })).rejects.toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+      retryable: true,
+    });
+  });
+
+  it('maps a fetch network failure to NETWORK_UNAVAILABLE', async () => {
+    configureCloud({
+      endpoint: 'http://x',
+      fetch: (async () => {
+        throw new TypeError('fetch failed');
+      }) as unknown as typeof fetch,
+    });
+    await expect(ExpoAI.generate({ prompt: 'hi', provider: 'cloud' })).rejects.toMatchObject({
+      code: 'NETWORK_UNAVAILABLE',
+    });
+  });
+
+  it('falls back to cloud only with fallback: cloud, reporting provider usage', async () => {
+    registerAdapter(
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        throwError: new ExpoAIError({
+          code: 'MODEL_NOT_READY',
+          provider: 'apple-foundation-models',
+          fallbackRecommended: true,
+        }),
+      }),
+    );
+    configureCloud({
+      endpoint: 'http://x',
+      fetch: (async () =>
+        jsonResponse({
+          text: 'cloud reply',
+          usage: { inputTokens: 3, outputTokens: 2 },
+        })) as unknown as typeof fetch,
+    });
+
+    await expect(ExpoAI.generate({ prompt: 'hi' })).rejects.toBeInstanceOf(ExpoAIError);
+
+    const result = await ExpoAI.generate({ prompt: 'hi', fallback: 'cloud' });
+    expect(result.provider).toBe('cloud');
+    expect(result.usedFallback).toBe(true);
+    expect(result.usage).toEqual({ inputTokens: 3, outputTokens: 2, source: 'provider' });
   });
 
   it('passes through a known ExpoAIErrorCode from the backend', async () => {
