@@ -39,7 +39,7 @@ function Hero() {
             </Link>
             <Link
               className={styles.secondaryBtn}
-              href="https://github.com/stewmore/expo-ai-runtime"
+              href="https://github.com/stewartmoreland/expo-ai-runtime"
             >
               GitHub
             </Link>
