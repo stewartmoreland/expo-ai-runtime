@@ -9,7 +9,9 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Only PRs cancel superseded runs: cancelling a push to main could kill release-it
+  # between per-package publishes and leave a partial release on npm.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: write # push the release commit + tag, create the GitHub release
@@ -27,6 +29,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm run check:no-network
       - run: npm run build # build first so cross-package type declarations exist for typecheck
       - run: npm run typecheck
       - run: npm run test:coverage
@@ -134,3 +137,8 @@ jobs:
             echo "::error::origin/main ($REMOTE_SHA) is not at tag v${VERSION} ($TAG_SHA). Release commit may not have been pushed — merge tag v${VERSION} onto main."
             exit 1
           fi
+      # Runs even after a failed publish (!cancelled) so a partial release names
+      # every missing name@version instead of failing silently.
+      - name: Verify every package version is on npm
+        if: ${{ !cancelled() && steps.decide.outputs.release == 'true' }}
+        run: npm run release:verify
