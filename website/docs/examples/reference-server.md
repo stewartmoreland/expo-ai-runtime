@@ -43,6 +43,9 @@ POST /v1/stream   -> SSE: data: {"type":"delta","text":"…"} … data: {"type":
 
 Request body: `{ prompt, instructions?, temperature?, maxOutputTokens?, schema?, schemaName? }`.
 
+`usage` is `{ inputTokens?, outputTokens? }`. In proxy mode a count the upstream API
+didn't report is omitted, never sent as `0`.
+
 ## Point the app at it
 
 ```ts

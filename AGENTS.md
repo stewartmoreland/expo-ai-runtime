@@ -15,7 +15,9 @@ Mobile-native AI runtime for Expo/React Native. Monorepo (npm workspaces). See `
 
 - Provider packages register their adapter at **import time**, guarded by `Platform.OS`. Importing a package on the wrong platform must be a no-op (register an always-unavailable adapter), never throw in `requireNativeModule`.
 - All provider/native errors are normalized to `ExpoAIError` (`code`, `provider`, `retryable`, `fallbackRecommended`) at the boundary.
-- Every `GenerateResult` carries `provider` + `privacy` metadata. Never silently send a `sensitive` prompt off-device.
+- Every `GenerateResult` carries `provider` + `privacy` + `usage` metadata (usage counts are never zero-filled; `source: 'unavailable'` instead).
+- Routing defaults to on-device. Off-device providers (PCC, cloud) are reached only explicitly or with `fallback !== 'none'`; `cloud` is not in `defaultProviderPriority`. Never silently send a `sensitive` prompt to a third-party cloud (needs `fallback: 'cloud'`; PCC stays permitted). `setPrivacyPolicy` is a hard ceiling, even over an explicit provider.
+- Native code sends only the error `code` (+ `detail`); `retryable` / `fallbackRecommended` come from `ERROR_DEFAULTS` in core.
 - Native methods stay primitive (PRD §9); ergonomics live in TypeScript.
 
 ## Commands

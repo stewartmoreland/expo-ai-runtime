@@ -7,24 +7,26 @@
 
 A **mobile-native AI runtime** for Expo and React Native. One TypeScript API over:
 
-- **Apple Foundation Models** (on-device, iOS 26+)
+- **Apple Foundation Models** (on-device, iOS 26+), plus opt-in **Apple Private Cloud Compute** (iOS 27+)
 - **Android Gemini Nano** via ML Kit GenAI / AICore (on-device)
 - An explicit, app-controlled **cloud fallback**
 
-…with runtime **capability detection**, **normalized errors**, **privacy metadata on every result**, **sessions**, **streaming**, and **structured output**.
+…with runtime **capability detection**, **normalized errors**, **privacy metadata and token usage on every result**, an app-wide **privacy policy**, **sessions**, **streaming**, and **structured output** (natively guided on Apple).
+
+Requests stay on-device by default. Off-device providers (Private Cloud Compute, cloud) are used only when you name them or set `fallback: 'cloud' | 'any'`, and a `sensitive` prompt reaches a third-party cloud only with `fallback: 'cloud'`.
 
 > This is the v1 provider layer described in [`docs/prd.md`](docs/prd.md) — a reliable way to call the best available native or local model from a React Native app. It is intentionally _not_ an agent framework yet.
 
 ## Packages
 
-| Package                                                                                 | What it is                                                                                                                                                                             | Version |
-| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| [`@stewmore/expo-ai-core`](packages/expo-ai-core)                                       | Pure-TS heart: public `ExpoAI` API, adapter contract, provider router, capability registry, sessions, structured-output validation/repair, privacy, normalized errors. No native code. | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-core)
-| [`@stewmore/expo-ai-react`](packages/expo-ai-react)                                     | React hooks for the `ExpoAI` API.                                                                                                                              | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-react)
-| [`@stewmore/expo-ai-apple-foundation-models`](packages/expo-ai-apple-foundation-models) | iOS adapter wrapping Apple's `FoundationModels` framework (Swift).                                                                                                                     | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-apple-foundation-models)
-| [`@stewmore/expo-ai-android-aicore`](packages/expo-ai-android-aicore)                   | Android adapter wrapping ML Kit GenAI / Gemini Nano via AICore (Kotlin).                                                                                                               | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-android-aicore)
-| [`@stewmore/expo-ai-cloud`](packages/expo-ai-cloud)                                     | Cloud fallback client adapter (configurable endpoint, streaming via `expo/fetch`).                                                                                                     | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-cloud)
-| [`@stewmore/expo-ai-evals`](packages/expo-ai-evals)                                     | Node-first evaluation harness (quality, schema validity, latency, fallback frequency).                                                                                                 | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-evals)
+| Package                                                                                 | What it is                                                                                                                                                                             | Version                                                                                |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [`@stewmore/expo-ai-core`](packages/expo-ai-core)                                       | Pure-TS heart: public `ExpoAI` API, adapter contract, provider router, capability registry, sessions, structured-output validation/repair, privacy, normalized errors. No native code. | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-core)                    |
+| [`@stewmore/expo-ai-react`](packages/expo-ai-react)                                     | React hooks for the `ExpoAI` API.                                                                                                                                                      | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-react)                   |
+| [`@stewmore/expo-ai-apple-foundation-models`](packages/expo-ai-apple-foundation-models) | iOS adapter wrapping Apple's `FoundationModels` framework (Swift).                                                                                                                     | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-apple-foundation-models) |
+| [`@stewmore/expo-ai-android-aicore`](packages/expo-ai-android-aicore)                   | Android adapter wrapping ML Kit GenAI / Gemini Nano via AICore (Kotlin).                                                                                                               | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-android-aicore)          |
+| [`@stewmore/expo-ai-cloud`](packages/expo-ai-cloud)                                     | Cloud fallback client adapter (configurable endpoint, streaming via `expo/fetch`).                                                                                                     | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-cloud)                   |
+| [`@stewmore/expo-ai-evals`](packages/expo-ai-evals)                                     | Node-first evaluation harness (quality, schema validity, latency, fallback frequency).                                                                                                 | ![NPM Version](https://img.shields.io/npm/v/@stewmore/expo-ai-evals)                   |
 
 ## Examples
 

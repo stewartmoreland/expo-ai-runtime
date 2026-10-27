@@ -29,6 +29,10 @@ Every result carries **`provider`** and **`privacy`** metadata, so the app alway
 which engine answered and whether the prompt left the device. See the
 [privacy model](../concepts/privacy.md) for what the modes mean.
 
+Requests stay on-device by default. `fallback: 'cloud'` allows the router to go
+off-device (Apple Private Cloud Compute or your cloud backend) when no on-device provider
+can answer; leave it out to stay on-device.
+
 There's no setup step beyond importing a provider package — adapters self-register on
 import. If none is registered, `ExpoAI.generate()` throws a clear `UNAVAILABLE` error
 telling you which package to install.

@@ -28,9 +28,37 @@ export type ExpoAIPrivacyInfo = {
 
 :::warning[Sensitive prompts]
 Do not silently fall back to a third-party cloud for sensitive workflows unless the app
-has disclosed and enabled that behavior. Mark a request `sensitive` and the router will
-fail locally rather than route it off-device when cloud fallback is disabled.
+has disclosed and enabled that behavior. Mark a request `sensitive` and the router won't
+send it to a third-party cloud unless you set `fallback: 'cloud'` or name `cloud` as the
+provider. Apple Private Cloud Compute stays permitted for sensitive prompts, but like any
+off-device provider it still needs `fallback` other than `'none'`.
 :::
 
 The example apps render these modes as badges (green = on-device, purple = Apple Private
 Cloud Compute, amber = third-party cloud) — the same visual language this site uses.
+
+## App-wide privacy policy
+
+`ExpoAI.setPrivacyPolicy` sets a ceiling the router never routes outside, even for an
+explicitly requested provider. The default allows every provider and mode.
+
+```ts
+ExpoAI.setPrivacyPolicy({
+  allowedModes: ['on-device', 'apple-private-cloud-compute'],
+  allowedProviders: ['apple-foundation-models', 'apple-private-cloud-compute'],
+  sensitiveByDefault: true, // every request is sensitive; a request can't opt out
+  lock: true, // any later setPrivacyPolicy call throws
+});
+```
+
+- A provider must be in `allowedProviders` **and** its privacy mode in `allowedModes`.
+- `sensitiveByDefault` is OR-ed with each request's `sensitive`.
+- `sensitive` blocks only silent routing. An explicit `provider: 'cloud'` with
+  `sensitive: true` is still allowed. To forbid a provider outright, leave it (or its
+  mode) out of the policy.
+- `getAvailability()` and `getCapabilities()` only consider allowed providers;
+  `listProviders()` lists every registered one.
+- Sessions honour `sensitive` when they pick a provider, and a session whose provider a
+  later policy disallows throws `UNAVAILABLE` on its next call.
+- `ExpoAI.getPrivacyPolicy()` returns the current policy, and `isProviderAllowed(provider)`
+  checks one provider against it.

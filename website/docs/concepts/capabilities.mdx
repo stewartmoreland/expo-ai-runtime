@@ -65,8 +65,36 @@ export type ExpoAIUnavailableReason =
   | 'unsupported_bootloader_state'
   | 'missing_dependency'
   | 'provider_not_configured'
+  | 'unsupported_locale' // the device language isn't supported by the model
+  | 'quota_exhausted' // Apple Private Cloud Compute usage limit reached
+  | 'entitlement_missing' // Apple Private Cloud Compute not configured for the app
   | 'unknown';
 ```
 
 Use `ExpoAI.getCapabilities()` for the active provider, or `ExpoAI.listProviders()` to
-inspect every registered provider and its capabilities.
+inspect every registered provider and its capabilities. `getAvailability()` and
+`getCapabilities()` skip providers the [privacy policy](./privacy.md#app-wide-privacy-policy)
+disallows.
+
+- **`contextWindow`** comes from the OS when the provider reports it. Apple Foundation
+  Models reports the model's real context size (4096 tokens below iOS 27).
+- **`supportedLanguages`** on `ExpoAIAvailability` lists the BCP-47 tags the provider's
+  model supports, when it reports them.
+
+## Reacting to changes
+
+Availability changes when the user enables Apple Intelligence, a model finishes
+downloading, or the app returns to the foreground. Subscribe instead of polling:
+
+```ts
+const sub = ExpoAI.onAvailabilityChange((availability) => {
+  console.log(availability.provider, availability.available);
+});
+// later
+sub.remove();
+```
+
+Provider packages call `notifyAvailabilityChange(provider)` when the app returns to the
+foreground and after a model download. The
+[`useCapabilities`](../packages/react.md#usecapabilities) hook refreshes on these events
+automatically.

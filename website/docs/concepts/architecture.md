@@ -18,7 +18,7 @@ flowchart TD
   API --> Capabilities[Capability Registry]
   API --> Sessions[Session Manager]
   API --> Schema[Structured Output Layer]
-  API --> Privacy[Privacy Metadata]
+  API --> Privacy[Privacy Policy + Metadata]
   API --> Errors[Normalized Error Layer]
 
   Router --> IOS[iOS Native Adapter]
@@ -27,6 +27,7 @@ flowchart TD
   Router --> Cloud[Cloud Fallback Adapter]
 
   IOS --> AppleFM[Apple Foundation Models]
+  IOS --> PCC[Apple Private Cloud Compute]
 
   Android --> AICore[ML Kit GenAI Prompt API]
   AICore --> GeminiNano[Gemini Nano via AICore]
@@ -46,7 +47,8 @@ module directly.
 ```txt
 packages/
   expo-ai-core/                      # ExpoAI API, router, registry, sessions, schema, privacy, errors
-  expo-ai-apple-foundation-models/   # iOS adapter (Swift, FoundationModels)
+  expo-ai-react/                     # React hooks
+  expo-ai-apple-foundation-models/   # iOS adapters: on-device + Private Cloud Compute (Swift)
   expo-ai-android-aicore/            # Android adapter (Kotlin, ML Kit GenAI)
   expo-ai-cloud/                     # cloud fallback client adapter
   expo-ai-evals/                     # Node eval harness

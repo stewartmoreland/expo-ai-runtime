@@ -170,12 +170,13 @@ Default provider priority:
 ```ts
 export const defaultProviderPriority: ExpoAIProvider[] = [
   'apple-foundation-models',
-  'apple-private-cloud-compute',
   'android-aicore-gemini-nano',
   'litert-lm',
-  'cloud',
+  'apple-private-cloud-compute', // off-device: only via fallback !== 'none' or explicit provider
 ];
 ```
+
+`cloud` is not in the priority list. Registered providers that aren't listed (such as `cloud`) are appended in registration order.
 
 Provider categories:
 
@@ -260,11 +261,13 @@ export type ExpoAICapabilities = {
   supportsBringYourOwnModel: boolean;
   supportsModelDownload: boolean;
 
-  contextWindow?: number;
+  contextWindow?: number; // from the OS when the provider reports it (Apple: 4096 below iOS 27)
 
   reasonUnavailable?: ExpoAIUnavailableReason;
 };
 ```
+
+`ExpoAIAvailability` also carries `supportedLanguages?: string[]` (BCP-47) when the provider reports them. Apps subscribe to changes with `ExpoAI.onAvailabilityChange(cb)`; provider packages call `notifyAvailabilityChange(provider)` on app foreground and after a model download.
 
 Unavailable reasons:
 
@@ -280,6 +283,9 @@ export type ExpoAIUnavailableReason =
   | 'unsupported_bootloader_state'
   | 'missing_dependency'
   | 'provider_not_configured'
+  | 'unsupported_locale'
+  | 'quota_exhausted'
+  | 'entitlement_missing'
   | 'unknown';
 ```
 
@@ -354,7 +360,26 @@ NativeExpoAI.generateInSession(
 NativeExpoAI.disposeSession(
   sessionId: string
 ): Promise<void>;
+
+// Optional (a provider may omit them; core emulates or degrades):
+NativeExpoAI.generateObject(
+  options: NativeGenerateOptions // + schemaJson, schemaName?
+): Promise<NativeGenerateResult>; // text is the JSON string
+
+NativeExpoAI.cancel(requestId: string): Promise<void>;
+
+NativeExpoAI.prewarm(options: NativeGenerateOptions): Promise<boolean>;
+
+NativeExpoAI.prewarmSession(
+  sessionId: string,
+  options: { promptPrefix?: string }
+): Promise<boolean>;
 ```
+
+- `generate`, `generateInSession` and `generateObject` take a `requestId` option, so `cancel(requestId)` can stop the native task when the caller's `AbortSignal` fires.
+- They resolve errors as values (`{ error: { code, message, nativeMessage, detail? } }`) instead of rejecting, so the payload survives the bridge. Native sends only `code`; `retryable` / `fallbackRecommended` come from the TypeScript defaults.
+- `NativeGenerateResult.usage` may carry `inputTokens`, `outputTokens`, `totalTokens`, `cachedInputTokens`, `reasoningTokens` and `source`.
+- `NativeAvailability` may carry `supportedLanguages` and `contextWindow`.
 
 Streaming should use native events:
 
@@ -551,10 +576,13 @@ await ExpoAI.generate({
 
 Routing rules:
 
-1. Try the requested provider.
-2. If unavailable and fallback is allowed, try the next provider.
-3. If prompt is sensitive and cloud fallback is disabled, fail locally.
-4. Return provider metadata with every result.
+1. The app's privacy policy (§14) is a hard ceiling, even over an explicit `provider`.
+2. Try the requested provider. Others follow only when `fallback` is not `'none'`.
+3. With no explicit provider, try on-device providers in priority order.
+4. Off-device providers (Apple Private Cloud Compute, cloud) are used only when requested explicitly or when `fallback` is not `'none'` (the default is `'none'`). `fallback: 'cloud'` means "allow off-device".
+5. If the prompt is sensitive, a third-party cloud is used only when requested explicitly or with `fallback: 'cloud'`; otherwise fail locally. Apple Private Cloud Compute stays permitted.
+6. Move to the next candidate only when a provider is unavailable or its error has `fallbackRecommended`.
+7. Return provider, privacy and usage metadata with every result.
 
 ---
 
@@ -580,6 +608,39 @@ Recommended UI copy:
 | Third-party cloud           | Processed using a configured cloud AI provider. |
 
 Do not silently fall back to third-party cloud for sensitive workflows unless the app has disclosed and enabled this behavior.
+
+App-wide policy:
+
+```ts
+export type ExpoAIPrivacyPolicy = {
+  allowedModes: ExpoAIPrivacyMode[];
+  allowedProviders: ExpoAIProvider[];
+  sensitiveByDefault?: boolean; // OR-ed with request.sensitive; a request cannot opt out
+  lock?: boolean; // after a locked set, any further setPrivacyPolicy throws
+};
+
+ExpoAI.setPrivacyPolicy(policy);
+ExpoAI.getPrivacyPolicy();
+```
+
+- The router never routes outside the policy, even to an explicitly requested provider. The default allows everything.
+- `sensitive` gates only silent routing: an explicit provider plus `sensitive` is still allowed unless the policy forbids it. A hard block must use `allowedModes` / `allowedProviders`.
+- Sessions honour `sensitive` when they bind to a provider, and re-check the policy on every call.
+
+Token usage is reported on every result:
+
+```ts
+export type ExpoAIUsage = {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  cachedInputTokens?: number;
+  reasoningTokens?: number;
+  source: 'provider' | 'estimated' | 'unavailable'; // 'unavailable' => no counts
+};
+```
+
+Counts are never zero-filled; a count the provider didn't report is omitted.
 
 ---
 
@@ -609,12 +670,16 @@ const result = await ExpoAI.generateObject({
 
 Implementation strategy:
 
-| Provider                | Strategy                                           |
-| ----------------------- | -------------------------------------------------- |
-| Apple Foundation Models | Native guided generation where available           |
-| Android AICore          | JSON prompt + validation + repair retry            |
-| LiteRT-LM               | JSON prompt + validation + repair retry            |
-| Cloud                   | Provider-native JSON mode or tools where available |
+| Provider                | Strategy                                             |
+| ----------------------- | ---------------------------------------------------- |
+| Apple Foundation Models | Native guided generation (`DynamicGenerationSchema`) |
+| Android AICore          | JSON prompt + validation + repair retry              |
+| LiteRT-LM               | JSON prompt + validation + repair retry              |
+| Cloud                   | Provider-native JSON mode or tools where available   |
+
+`structuredOutput: 'auto' | 'native' | 'emulated'` (default `'auto'`) chooses the strategy. `'auto'` uses native guided generation when the provider has it and retries with the JSON prompt on `UNSUPPORTED_SCHEMA`. `ExpoAI.generateObjectWithMeta` returns `{ object, result }`, where `result.structured = { mode, attempts, usedRepair }`.
+
+Apple guided generation accepts an object root with `properties` / `required`, `string` (optionally a string `enum`), `integer` / `number` (`minimum` / `maximum`), `boolean`, `array` (`items`, `minItems`, `maxItems`) and `description`. Other keywords (`$ref`, `anyOf`, `pattern`, `format`, nullable types, …) fail with `UNSUPPORTED_SCHEMA`.
 
 ---
 
@@ -629,6 +694,7 @@ export class ExpoAIError extends Error {
   retryable: boolean;
   fallbackRecommended: boolean;
   nativeMessage?: string;
+  detail?: string; // e.g. refusal explanation, unsupported schema keyword, quota reset date
 }
 ```
 
@@ -646,8 +712,20 @@ export type ExpoAIErrorCode =
   | 'CANCELLED'
   | 'TIMEOUT'
   | 'NATIVE_PROVIDER_ERROR'
+  | 'QUOTA_EXHAUSTED'
+  | 'NETWORK_UNAVAILABLE'
+  | 'SERVICE_UNAVAILABLE'
+  | 'ENTITLEMENT_MISSING'
+  | 'REFUSAL'
+  | 'UNSUPPORTED_SCHEMA'
+  | 'UNSUPPORTED_LOCALE'
+  | 'TOOL_ERROR'
+  | 'CONCURRENT_REQUEST'
+  | 'BACKGROUND_NOT_ALLOWED'
   | 'UNKNOWN';
 ```
+
+None of the codes from `QUOTA_EXHAUSTED` onward recommend fallback. `NETWORK_UNAVAILABLE`, `SERVICE_UNAVAILABLE`, `TOOL_ERROR`, `CONCURRENT_REQUEST` and `BACKGROUND_NOT_ALLOWED` are retryable; the rest are not. The per-code defaults live in `errors.ts`, and native modules send only the code.
 
 ---
 

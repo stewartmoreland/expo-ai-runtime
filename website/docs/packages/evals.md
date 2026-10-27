@@ -36,9 +36,17 @@ export type EvalResult = {
 };
 ```
 
-The harness runs against the mock cloud server and a mock adapter, so it needs no API
-keys or devices:
+The harness runs against mock adapters, so it needs no API keys or devices:
 
 ```bash
-npm run eval     # from the repo root
+npm run eval                                   # from the repo root
+npm run eval -- --providers apple-foundation-models,cloud --fallback cloud
 ```
+
+- **`--providers`** — comma-separated providers to register a mock adapter for (default
+  `apple-foundation-models`).
+- **`--fallback`** — `none` (default), `cloud`, or `any`; applies to cases that don't set
+  their own `fallback`. `runEvalSuite` also defaults to `'none'`, matching the runtime.
+- With `ENDPOINT` set, `cloud` uses the real [reference server](../examples/reference-server.md)
+  through `@stewmore/expo-ai-cloud`. That package is an **optional peer dependency**:
+  install it only if you eval against a cloud backend.
