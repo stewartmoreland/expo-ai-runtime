@@ -499,6 +499,8 @@ export async function generateValidatedObject(
   const schemaPrompt = () =>
     options.generateText(buildSchemaPrompt(options.basePrompt, options.schema, options.schemaName));
   const usages: Array<AdapterUsage | undefined> = [];
+  // A dropped (blank) seed was still a generation; count its usage.
+  if (options.seedText !== undefined && seed === undefined) usages.push(options.seedUsage);
   let lastErrors: string[] = [];
   let lastText = '';
   let attempts = 0;

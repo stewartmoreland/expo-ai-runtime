@@ -269,7 +269,14 @@ describe('createNativeAdapter — request bridge', () => {
     const native = new MockNative();
     nativeFn(native, path).mockResolvedValueOnce({
       text: '',
-      error: { code: 'REFUSAL', message: 'no', detail: 'policy' },
+      // A shared native module can label the payload with a sibling provider (a
+      // disposed PCC session reports the on-device one); the adapter's provider wins.
+      error: {
+        code: 'REFUSAL',
+        message: 'no',
+        detail: 'policy',
+        provider: 'apple-private-cloud-compute',
+      },
     });
     const error = await call(native, path, { prompt: 'hi' }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ExpoAIError);
