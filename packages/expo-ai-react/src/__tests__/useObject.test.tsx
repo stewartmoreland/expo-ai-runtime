@@ -26,11 +26,16 @@ describe('useObject', () => {
     );
 
     const { result } = renderHook(() => useObject<{ name: string; age: number }>());
+    let submitted: Awaited<ReturnType<typeof result.current.submit>>;
     await act(async () => {
-      await result.current.submit({ prompt: 'a person', schema: personSchema });
+      submitted = await result.current.submit({ prompt: 'a person', schema: personSchema });
     });
 
     expect(result.current.object).toEqual({ name: 'Ada', age: 36 });
+    expect(result.current.result?.provider).toBe('apple-foundation-models');
+    expect(result.current.result?.privacy.privacyMode).toBe('on-device');
+    expect(result.current.result?.usage.source).toBe('unavailable');
+    expect(submitted!).toEqual({ object: { name: 'Ada', age: 36 }, result: result.current.result });
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
   });
@@ -62,6 +67,7 @@ describe('useObject', () => {
 
     act(() => result.current.reset());
     expect(result.current.object).toBeNull();
+    expect(result.current.result).toBeNull();
     expect(result.current.error).toBeNull();
   });
 });

@@ -37,7 +37,7 @@ const INITIAL: State = {
  * Query what the runtime can do on this device. Resolves capabilities,
  * availability, and the full provider list on mount; call `refresh()` to re-query
  * (capabilities can change when the user toggles Apple Intelligence, finishes a
- * model download, etc.).
+ * model download, etc.). Also re-queries on every {@link ExpoAI.onAvailabilityChange}.
  */
 export function useCapabilities(): UseCapabilitiesResult {
   const [state, setState] = useState<State>(INITIAL);
@@ -61,6 +61,9 @@ export function useCapabilities(): UseCapabilitiesResult {
 
   useEffect(() => {
     refresh();
+    // Provider packages fire this on availability changes (incl. app foreground).
+    const sub = ExpoAI.onAvailabilityChange(() => refresh());
+    return () => sub.remove();
   }, [refresh]);
 
   return { ...state, refresh };

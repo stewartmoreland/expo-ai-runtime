@@ -1,7 +1,12 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { clearAdapters, registerAdapter } from '@stewmore/expo-ai-core';
+import {
+  ExpoAI,
+  clearAdapters,
+  notifyAvailabilityChange,
+  registerAdapter,
+} from '@stewmore/expo-ai-core';
 import { createMockAdapter } from '@stewmore/expo-ai-core/testing';
 
 import { useCapabilities } from '../useCapabilities.js';
@@ -43,5 +48,26 @@ describe('useCapabilities', () => {
     await waitFor(() =>
       expect(result.current.providers?.map((p) => p.provider)).toContain('cloud'),
     );
+  });
+
+  it('re-queries on availability change without a manual refresh', async () => {
+    const config = { provider: 'apple-foundation-models' as const, available: true };
+    registerAdapter(createMockAdapter(config));
+
+    const { result } = renderHook(() => useCapabilities());
+    await waitFor(() => expect(result.current.availability?.available).toBe(true));
+
+    config.available = false;
+    notifyAvailabilityChange('apple-foundation-models');
+    await waitFor(() => expect(result.current.availability?.available).toBe(false));
+  });
+
+  it('removes the availability subscription on unmount', () => {
+    const remove = vi.fn();
+    const spy = vi.spyOn(ExpoAI, 'onAvailabilityChange').mockReturnValue({ remove });
+    const { unmount } = renderHook(() => useCapabilities());
+    unmount();
+    expect(remove).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
   });
 });
