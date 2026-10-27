@@ -4,7 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
-const GITHUB_REPO = 'https://github.com/stewmore/expo-ai-runtime';
+const GITHUB_REPO = 'https://github.com/stewartmoreland/expo-ai-runtime';
 const EDIT_BASE = `${GITHUB_REPO}/tree/main/website/`;
 
 const config: Config = {
@@ -18,12 +18,12 @@ const config: Config = {
   },
 
   // Production url and base path (GitHub Pages project site).
-  url: 'https://stewmore.github.io',
+  url: 'https://stewartmoreland.github.io',
   baseUrl: '/expo-ai-runtime/',
   trailingSlash: false,
 
   // GitHub pages deployment config.
-  organizationName: 'stewmore',
+  organizationName: 'stewartmoreland',
   projectName: 'expo-ai-runtime',
 
   onBrokenLinks: 'throw',

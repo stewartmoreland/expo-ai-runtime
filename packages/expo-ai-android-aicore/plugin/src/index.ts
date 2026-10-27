@@ -15,7 +15,9 @@ import { type ConfigPlugin, createRunOncePlugin, withGradleProperties } from 'ex
 import { type GradleProperty, applyMinSdkVersion } from './build-properties';
 
 const PACKAGE_NAME = '@stewmore/expo-ai-android-aicore';
-const PACKAGE_VERSION = '0.1.0';
+// CommonJS at runtime (plugin/package.json); declared here so the plugin needs no @types/node.
+declare const require: (id: string) => { version: string };
+export const PACKAGE_VERSION: string = require('../../package.json').version;
 
 /** ML Kit GenAI / AICore (Gemini Nano) floor. */
 export const DEFAULT_MIN_SDK_VERSION = 26;

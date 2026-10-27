@@ -9,13 +9,13 @@ Pod::Spec.new do |s|
   s.description    = package['description']
   s.license        = package['license']
   s.author         = package['author']
-  s.homepage       = 'https://github.com/stewmore/expo-ai-runtime'
+  s.homepage       = 'https://github.com/stewartmoreland/expo-ai-runtime'
   s.platforms      = {
     :ios => '15.1',
     :tvos => '15.1'
   }
   s.swift_version  = '5.9'
-  s.source         = { git: 'https://github.com/stewmore/expo-ai-runtime' }
+  s.source         = { git: 'https://github.com/stewartmoreland/expo-ai-runtime' }
   s.static_framework = true
 
   s.dependency 'ExpoModulesCore'
