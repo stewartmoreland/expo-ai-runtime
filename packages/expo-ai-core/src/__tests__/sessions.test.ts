@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ExpoAI, clearAdapters, registerAdapter, type JSONSchema } from '../index.js';
-import { createMockAdapter } from '../testing.js';
+import { createMockAdapter, resetPrivacyPolicy } from '../testing.js';
 
 beforeEach(() => clearAdapters());
+afterEach(() => resetPrivacyPolicy());
 
 const personSchema: JSONSchema = {
   type: 'object',
@@ -154,5 +155,56 @@ describe('sessions (emulated over a stateless adapter)', () => {
     // A subsequent real turn is the only thing in the transcript.
     await session.generate({ prompt: 'and their email?' });
     expect(sessionPrompts).toEqual(['and their email?']);
+  });
+});
+
+describe('sessions — routing and policy', () => {
+  it('a sensitive session never binds to a third-party cloud via fallback any', async () => {
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models', available: false }));
+    registerAdapter(createMockAdapter({ provider: 'cloud' }));
+
+    await expect(ExpoAI.createSession({ sensitive: true, fallback: 'any' })).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+    });
+  });
+
+  it('rechecks the policy on every call after it is narrowed', async () => {
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models' }));
+    const session = await ExpoAI.createSession();
+    ExpoAI.setPrivacyPolicy({ allowedModes: ['on-device'], allowedProviders: [] });
+
+    const expected = { code: 'UNAVAILABLE', fallbackRecommended: false };
+    await expect(session.generate({ prompt: 'hi' })).rejects.toMatchObject(expected);
+    await expect(
+      session.generateObject({ prompt: 'x', schema: personSchema }),
+    ).rejects.toMatchObject(expected);
+    await expect(session.prewarm()).rejects.toMatchObject(expected);
+    await expect(
+      session.stream({ prompt: 'hi' })[Symbol.asyncIterator]().next(),
+    ).rejects.toMatchObject(expected);
+  });
+
+  it('generateObjectWithMeta returns structured meta and usage', async () => {
+    registerAdapter(
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        objectText: '{"name":"Ada","age":36}',
+        usage: { inputTokens: 10, outputTokens: 5 },
+      }),
+    );
+    const session = await ExpoAI.createSession();
+    const { object, result } = await session.generateObjectWithMeta({
+      prompt: 'extract',
+      schema: personSchema,
+    });
+    expect(object).toEqual({ name: 'Ada', age: 36 });
+    expect(result.structured).toEqual({ mode: 'native', attempts: 1, usedRepair: false });
+    expect(result.usage).toEqual({ inputTokens: 10, outputTokens: 5, source: 'provider' });
+  });
+
+  it('prewarm resolves false when the session cannot prewarm', async () => {
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models' }));
+    const session = await ExpoAI.createSession();
+    await expect(session.prewarm()).resolves.toBe(false);
   });
 });

@@ -1,11 +1,38 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { ExpoAI, clearAdapters, registerAdapter } from '../index.js';
-import { createMockAdapter } from '../testing.js';
+import {
+  ExpoAI,
+  buildCandidateList,
+  clearAdapters,
+  defaultProviderPriority,
+  registerAdapter,
+} from '../index.js';
+import { createMockAdapter, resetPrivacyPolicy } from '../testing.js';
 
 beforeEach(() => clearAdapters());
+afterEach(() => resetPrivacyPolicy());
 
 describe('provider router — selection & priority', () => {
+  it('pins the default priority: on-device first, PCC last, no cloud', () => {
+    expect(defaultProviderPriority).toEqual([
+      'apple-foundation-models',
+      'android-aicore-gemini-nano',
+      'litert-lm',
+      'apple-private-cloud-compute',
+    ]);
+  });
+
+  it('appends non-priority providers (cloud) after the priority ones', () => {
+    registerAdapter(createMockAdapter({ provider: 'cloud' }));
+    registerAdapter(createMockAdapter({ provider: 'apple-private-cloud-compute' }));
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models' }));
+    expect(buildCandidateList({ fallback: 'any' })).toEqual([
+      'apple-foundation-models',
+      'apple-private-cloud-compute',
+      'cloud',
+    ]);
+  });
+
   it('uses the highest-priority available provider', async () => {
     registerAdapter(
       createMockAdapter({ provider: 'apple-foundation-models', respondWith: 'apple' }),
@@ -59,24 +86,32 @@ describe('provider router — zero-config first-run messaging', () => {
   });
 
   it('the install guidance names the provider packages and self-registration', async () => {
-    const error = await ExpoAI.generate({ prompt: 'hi' }).catch((e: unknown) => e as Error);
+    const error = (await ExpoAI.generate({ prompt: 'hi' }).catch((e: unknown) => e)) as Error;
     expect(error.message).toContain('@stewmore/expo-ai-apple-foundation-models');
     expect(error.message).toContain('@stewmore/expo-ai-android-aicore');
-    expect(error.message).toContain('@stewmore/expo-ai-cloud');
     expect(error.message).toContain('self-register on import');
   });
 
-  it('points at the routing policy when providers are registered but all gated out', async () => {
+  it('points at fallback when only an off-device provider is registered', async () => {
     // Only a cloud provider is registered, but the default fallback is 'none',
     // so the cloud candidate is gated out and the list is empty.
     registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'cloud' }));
 
-    const error = await ExpoAI.generate({ prompt: 'hi' }).catch((e: unknown) => e as Error);
+    const error = (await ExpoAI.generate({ prompt: 'hi' }).catch((e: unknown) => e)) as Error;
     expect(error).toMatchObject({ code: 'UNAVAILABLE', provider: 'none' });
-    expect(error.message).toContain('excluded by the routing policy');
+    expect(error.message).toContain('fallback');
     expect(error.message).toContain('cloud');
     // It must NOT show the install guidance — a provider *is* registered.
     expect(error.message).not.toContain('Install and import a provider package');
+  });
+
+  it('points at the privacy policy when it excludes every registered provider', async () => {
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models' }));
+    ExpoAI.setPrivacyPolicy({ allowedModes: ['on-device'], allowedProviders: [] });
+
+    const error = (await ExpoAI.generate({ prompt: 'hi' }).catch((e: unknown) => e)) as Error;
+    expect(error).toMatchObject({ code: 'UNAVAILABLE', provider: 'none' });
+    expect(error.message).toContain('privacy policy');
   });
 
   it('streaming surfaces the same install guidance when no provider is registered', async () => {
@@ -107,9 +142,22 @@ describe('provider router — zero-config first-run messaging', () => {
       }),
     );
 
-    const error = await ExpoAI.generate({ prompt: 'hi' }).catch((e: unknown) => e as Error);
+    const error = (await ExpoAI.generate({ prompt: 'hi' }).catch((e: unknown) => e)) as Error;
     expect(error).toMatchObject({ code: 'UNAVAILABLE', provider: 'apple-foundation-models' });
     expect(error.message).toContain('apple_intelligence_disabled');
+  });
+
+  it('maps specific unavailable reasons to their error codes', async () => {
+    registerAdapter(
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        available: false,
+        reasonUnavailable: 'unsupported_locale',
+      }),
+    );
+    await expect(ExpoAI.generate({ prompt: 'hi' })).rejects.toMatchObject({
+      code: 'UNSUPPORTED_LOCALE',
+    });
   });
 });
 
@@ -197,6 +245,35 @@ describe('provider router — privacy / sensitivity gating', () => {
     const result = await ExpoAI.generate({ prompt: 'weather?', fallback: 'any' });
     expect(result.provider).toBe('cloud');
   });
+
+  it("does not route to Private Cloud Compute with fallback 'none'", async () => {
+    registerAdapter(createMockAdapter({ provider: 'apple-foundation-models', available: false }));
+    registerAdapter(createMockAdapter({ provider: 'apple-private-cloud-compute' }));
+
+    await expect(ExpoAI.generate({ prompt: 'hi' })).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      provider: 'apple-foundation-models',
+    });
+  });
+
+  it("allows a sensitive prompt to Private Cloud Compute with fallback 'any', but not cloud", async () => {
+    registerAdapter(createMockAdapter({ provider: 'apple-private-cloud-compute' }));
+    registerAdapter(createMockAdapter({ provider: 'cloud' }));
+
+    expect(buildCandidateList({ sensitive: true, fallback: 'any' })).toEqual([
+      'apple-private-cloud-compute',
+    ]);
+    const result = await ExpoAI.generate({ prompt: 'secret', sensitive: true, fallback: 'any' });
+    expect(result.provider).toBe('apple-private-cloud-compute');
+    expect(result.privacy.sendsPromptOffDevice).toBe(true);
+  });
+
+  it('routes to Private Cloud Compute when explicitly requested, even with fallback none', async () => {
+    registerAdapter(createMockAdapter({ provider: 'apple-private-cloud-compute' }));
+    const result = await ExpoAI.generate({ prompt: 'hi', provider: 'apple-private-cloud-compute' });
+    expect(result.provider).toBe('apple-private-cloud-compute');
+    expect(result.usedFallback).toBe(false);
+  });
 });
 
 describe('provider router — usedFallback accuracy & task routing', () => {
@@ -248,13 +325,23 @@ describe('provider router — usedFallback accuracy & task routing', () => {
 });
 
 describe('provider router — abort signal', () => {
-  it('rejects generate when the signal is already aborted', async () => {
-    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'x' }));
+  it('rejects generate when the signal is already aborted, without starting generation', async () => {
+    const prompts: string[] = [];
+    registerAdapter(
+      createMockAdapter({
+        provider: 'cloud',
+        respondWith: (prompt) => {
+          prompts.push(prompt);
+          return 'x';
+        },
+      }),
+    );
     const controller = new AbortController();
     controller.abort();
     await expect(
       ExpoAI.generate({ prompt: 'hi', provider: 'cloud', signal: controller.signal }),
     ).rejects.toMatchObject({ code: 'CANCELLED' });
+    expect(prompts).toEqual([]);
   });
 
   it('rejects generate when aborted mid-flight', async () => {

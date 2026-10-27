@@ -8,7 +8,7 @@
  */
 
 import type { ExpoAIAdapter } from './adapter.js';
-import type { ExpoAIProvider } from './types.js';
+import { defaultProviderPriority, type ExpoAIProvider } from './types.js';
 
 const adapters = new Map<ExpoAIProvider, ExpoAIAdapter>();
 
@@ -34,6 +34,18 @@ export function getAdapters(): ExpoAIAdapter[] {
 
 export function getRegisteredProviders(): ExpoAIProvider[] {
   return [...adapters.keys()];
+}
+
+/**
+ * Registered providers, default-priority first, then any others (e.g. `cloud`)
+ * in registration order.
+ */
+export function getOrderedProviders(): ExpoAIProvider[] {
+  const registered = getRegisteredProviders();
+  return [
+    ...defaultProviderPriority.filter((p) => adapters.has(p)),
+    ...registered.filter((p) => !defaultProviderPriority.includes(p)),
+  ];
 }
 
 /** Test/reset hook — removes every registered adapter. */

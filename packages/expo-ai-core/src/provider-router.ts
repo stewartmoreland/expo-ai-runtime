@@ -2,113 +2,89 @@
  * Provider router (docs/prd.md §13).
  *
  * Routing rules:
- *   1. Try the requested provider (or the default priority order).
- *   2. If unavailable and fallback is allowed, advance to the next provider.
- *   3. If the prompt is sensitive and cloud fallback is disabled, fail locally.
- *   4. Stamp provider + privacy metadata onto every result.
+ *   1. The app's privacy policy is a hard ceiling, even over an explicit provider.
+ *   2. Try the requested provider (or the default priority order).
+ *   3. Off-device providers (PCC, cloud) are used only when explicitly requested
+ *      or when `fallback` is not `'none'`.
+ *   4. A sensitive prompt reaches a third-party cloud only when explicitly
+ *      requested or with `fallback: 'cloud'`.
+ *   5. Stamp provider + privacy metadata onto every result.
  */
 
 import type {
   AdapterGenerateResult,
+  AdapterUsage,
   ExpoAIAdapter,
   NormalizedGenerateRequest,
   NormalizedObjectRequest,
 } from './adapter.js';
 import { AsyncQueue } from './async-queue.js';
-import { ExpoAIError } from './errors.js';
-import { privacyModeForProvider } from './privacy.js';
-import { getAdapter, getRegisteredProviders, hasAdapter } from './registry.js';
-import { finalizeResult } from './result.js';
-import { createStreamIterable, type StreamSource } from './stream-bridge.js';
-import { buildSchemaPrompt, generateValidatedObject, parsePartialJson } from './structured-output.js';
+import { ExpoAIError, type ExpoAIErrorCode } from './errors.js';
 import {
-  defaultProviderPriority,
-  type DeepPartial,
-  type ExpoAIAvailability,
-  type ExpoAIFallback,
-  type ExpoAIProvider,
-  type GenerateChunk,
-  type GenerateObjectOptions,
-  type GenerateOptions,
-  type GenerateResult,
-  type StreamObjectOptions,
-  type StreamObjectResult,
+  getPrivacyPolicy,
+  isProviderAllowed,
+  privacyModeForProvider,
+  providerSendsPromptOffDevice,
+} from './privacy.js';
+import { getAdapter, getOrderedProviders, getRegisteredProviders, hasAdapter } from './registry.js';
+import { finalizeObjectResult, finalizeResult } from './result.js';
+import { createStreamIterable, type StreamSource } from './stream-bridge.js';
+import {
+  buildSchemaPrompt,
+  generateValidatedObject,
+  parsePartialJson,
+  type GenerateValidatedObjectOptions,
+} from './structured-output.js';
+import type {
+  DeepPartial,
+  ExpoAIAvailability,
+  ExpoAIProvider,
+  ExpoAIRoutingOptions,
+  ExpoAIUnavailableReason,
+  GenerateChunk,
+  GenerateObjectOptions,
+  GenerateOptions,
+  GenerateResult,
+  StreamObjectOptions,
+  StreamObjectResult,
 } from './types.js';
 
 /* ------------------------------------------------------------------ */
 /* Candidate selection                                                */
 /* ------------------------------------------------------------------ */
 
-type RoutingPolicy = {
-  provider?: ExpoAIProvider;
-  fallback: ExpoAIFallback;
-  sensitive: boolean;
-};
-
-function policyFrom(options: {
-  provider?: ExpoAIProvider;
-  fallback?: ExpoAIFallback;
-  sensitive?: boolean;
-}): RoutingPolicy {
-  return {
-    provider:
-      options.provider && options.provider !== 'system-preferred' ? options.provider : undefined,
-    fallback: options.fallback ?? 'none',
-    sensitive: options.sensitive ?? false,
-  };
-}
-
 /**
  * The ordered, gated list of providers to attempt for a request. Filtered to
- * registered adapters and to providers the privacy/fallback policy permits.
+ * registered adapters and to providers the privacy policy and fallback permit.
  */
-export function buildCandidateList(options: {
-  provider?: ExpoAIProvider;
-  fallback?: ExpoAIFallback;
-  sensitive?: boolean;
-}): ExpoAIProvider[] {
-  const policy = policyFrom(options);
-  const cloudAllowed = policy.fallback === 'cloud' || policy.fallback === 'any';
+export function buildCandidateList(options: ExpoAIRoutingOptions): ExpoAIProvider[] {
+  const policy = getPrivacyPolicy();
+  const explicit =
+    options.provider && options.provider !== 'system-preferred' ? options.provider : undefined;
+  const fallback = options.fallback ?? 'none';
+  const sensitive = options.sensitive === true || policy.sensitiveByDefault === true;
+  const ordered = getOrderedProviders();
 
-  // With no explicit provider, the router considers all on-device system
-  // providers by priority regardless of `fallback` (cloud is gated separately
-  // below). `fallback` only restricts falling back *away from an explicitly
-  // chosen provider* — moving between on-device system providers is not
-  // "falling back" in the privacy sense.
-  const base: ExpoAIProvider[] = policy.provider
-    ? [
-        policy.provider,
-        ...(policy.fallback !== 'none'
-          ? defaultProviderPriority.filter((p) => p !== policy.provider)
-          : []),
-      ]
-    : [...defaultProviderPriority];
+  // With no explicit provider, every on-device provider is considered by
+  // priority regardless of `fallback`: moving between on-device providers is
+  // not "falling back" in the privacy sense.
+  const base: ExpoAIProvider[] = explicit
+    ? [explicit, ...(fallback !== 'none' ? ordered.filter((p) => p !== explicit) : [])]
+    : ordered;
 
-  const result: ExpoAIProvider[] = [];
-  base.forEach((provider, index) => {
-    if (!hasAdapter(provider)) return;
-    const isExplicitPrimary = policy.provider === provider && index === 0;
-
-    // Cloud is opt-in: only used when explicitly requested or fallback enables it.
-    if (provider === 'cloud' && !isExplicitPrimary && !cloudAllowed) return;
-
-    // Sensitivity gate: never send a sensitive prompt to a third-party cloud
-    // unless cloud is *explicitly* opted into — fallback "cloud" or an explicit
-    // cloud provider. A loose fallback of "any" is not enough. On-device and
-    // Apple Private Cloud Compute (Apple-managed) remain permitted (docs/prd.md
-    // §13.3, §14).
-    if (
-      policy.sensitive &&
-      privacyModeForProvider(provider) === 'third-party-cloud' &&
-      !isExplicitPrimary &&
-      policy.fallback !== 'cloud'
-    ) {
-      return;
-    }
-
-    result.push(provider);
+  return base.filter((provider, index) => {
+    // The policy is a hard ceiling, even over an explicit provider.
+    if (!hasAdapter(provider) || !isProviderAllowed(provider, policy)) return false;
+    // An explicit provider is not a silent route.
+    if (explicit === provider && index === 0) return true;
+    const mode = privacyModeForProvider(provider);
+    if (mode === 'on-device') return true;
+    // Off-device (PCC or third-party cloud) only by opt-in fallback.
+    if (fallback === 'none') return false;
+    // A sensitive prompt reaches a third-party cloud only with fallback 'cloud';
+    // Apple Private Cloud Compute stays permitted (docs/prd.md §13.3, §14).
+    return !(sensitive && mode === 'third-party-cloud' && fallback !== 'cloud');
   });
-  return result;
 }
 
 /**
@@ -129,20 +105,28 @@ function normalizeRequest(options: GenerateOptions): NormalizedGenerateRequest {
   if (options.instructions !== undefined) req.instructions = options.instructions;
   if (options.temperature !== undefined) req.temperature = options.temperature;
   if (options.maxOutputTokens !== undefined) req.maxOutputTokens = options.maxOutputTokens;
+  if (options.reasoningLevel !== undefined) req.reasoningLevel = options.reasoningLevel;
   if (options.metadata !== undefined) req.metadata = options.metadata;
   if (options.signal !== undefined) req.signal = options.signal;
   if (options.model !== undefined) req.model = options.model;
   return req;
 }
 
+/** Unavailable reasons that have a more specific error code than UNAVAILABLE. */
+const REASON_CODES: Partial<Record<ExpoAIUnavailableReason, ExpoAIErrorCode>> = {
+  unsupported_locale: 'UNSUPPORTED_LOCALE',
+  quota_exhausted: 'QUOTA_EXHAUSTED',
+  entitlement_missing: 'ENTITLEMENT_MISSING',
+};
+
 function unavailableError(provider: ExpoAIProvider, availability: ExpoAIAvailability): ExpoAIError {
+  const reason = availability.reasonUnavailable;
   return new ExpoAIError({
-    code: 'UNAVAILABLE',
+    code: (reason && REASON_CODES[reason]) ?? 'UNAVAILABLE',
     provider,
-    message: availability.reasonUnavailable
-      ? `Provider ${provider} is unavailable: ${availability.reasonUnavailable}`
+    message: reason
+      ? `Provider ${provider} is unavailable: ${reason}`
       : `Provider ${provider} is unavailable.`,
-    fallbackRecommended: true,
   });
 }
 
@@ -152,23 +136,31 @@ function unavailableError(provider: ExpoAIProvider, availability: ExpoAIAvailabi
  *
  *   - Nothing registered at all → they haven't installed/imported a provider
  *     package yet (provider packages self-register on import).
- *   - Providers registered but all gated out by the routing policy (e.g. only a
- *     cloud provider is registered while `fallback` is `'none'`, or a sensitive
- *     prompt was blocked from a third-party cloud) → point at the policy knob.
+ *   - Providers registered but all gated out → name the causes: the privacy
+ *     policy, and off-device providers gated by `fallback` / `sensitive`.
  */
 function noProviderError(): ExpoAIError {
   const registered = getRegisteredProviders();
+  const blocked = registered.filter((p) => !isProviderAllowed(p));
+  const offDevice = registered.filter(
+    (p) => isProviderAllowed(p) && providerSendsPromptOffDevice(p),
+  );
   const message =
     registered.length === 0
       ? 'No AI provider is registered. Install and import a provider package — ' +
-        '"@stewmore/expo-ai-apple-foundation-models" (iOS), ' +
-        '"@stewmore/expo-ai-android-aicore" (Android), or ' +
-        '"@stewmore/expo-ai-cloud" (cloud fallback) — then rebuild the app ' +
+        '"@stewmore/expo-ai-apple-foundation-models" (iOS) or ' +
+        '"@stewmore/expo-ai-android-aicore" (Android) — then rebuild the app ' +
         '(e.g. `npx expo prebuild`). Provider packages self-register on import.'
       : `No eligible AI provider for this request. Registered provider(s) ` +
-        `[${registered.join(', ')}] were all excluded by the routing policy. ` +
-        "If you meant to use the cloud, pass fallback: 'cloud'; note a prompt " +
-        'marked sensitive is never sent to a third-party cloud.';
+        `[${registered.join(', ')}] were all excluded.` +
+        (blocked.length > 0
+          ? ` [${blocked.join(', ')}] excluded by the privacy policy (see ExpoAI.setPrivacyPolicy).`
+          : '') +
+        (offDevice.length > 0
+          ? ` Off-device provider(s) [${offDevice.join(', ')}] are used only when requested ` +
+            "explicitly or with fallback: 'cloud' | 'any'; a sensitive prompt reaches a " +
+            "third-party cloud only with fallback: 'cloud'."
+          : '');
   return new ExpoAIError({
     code: 'UNAVAILABLE',
     provider: 'none',
@@ -184,17 +176,19 @@ function validatePrompt(prompt: string, provider: ExpoAIProvider): void {
 }
 
 /**
- * Reject with CANCELLED if `signal` is (or becomes) aborted before `promise`
- * settles. Native generation can't always be torn down, but the JS caller still
- * gets a prompt CANCELLED instead of waiting for a result it no longer wants.
+ * Run `start` and reject with CANCELLED if `signal` is (or becomes) aborted
+ * before it settles. An already-aborted signal never starts the work. Native
+ * generation can't always be torn down, but the JS caller still gets a prompt
+ * CANCELLED instead of waiting for a result it no longer wants.
  */
 function withSignal<T>(
-  promise: Promise<T>,
+  start: () => Promise<T>,
   signal: AbortSignal | undefined,
   provider: ExpoAIProvider,
 ): Promise<T> {
-  if (!signal) return promise;
+  if (!signal) return start();
   if (signal.aborted) return Promise.reject(new ExpoAIError({ code: 'CANCELLED', provider }));
+  const promise = start();
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => reject(new ExpoAIError({ code: 'CANCELLED', provider }));
     signal.addEventListener('abort', onAbort, { once: true });
@@ -218,11 +212,9 @@ function withSignal<T>(
  * Select the first available adapter for a request (availability-based only;
  * does not attempt generation). Used by streaming and session creation.
  */
-export async function selectAvailableAdapter(options: {
-  provider?: ExpoAIProvider;
-  fallback?: ExpoAIFallback;
-  sensitive?: boolean;
-}): Promise<{ adapter: ExpoAIAdapter; provider: ExpoAIProvider; usedFallback: boolean }> {
+export async function selectAvailableAdapter(
+  options: ExpoAIRoutingOptions,
+): Promise<{ adapter: ExpoAIAdapter; provider: ExpoAIProvider; usedFallback: boolean }> {
   const candidates = buildCandidateList(options);
   if (candidates.length === 0) throw noProviderError();
   const primary = intendedPrimaryProvider(options.provider, candidates);
@@ -266,7 +258,7 @@ export async function routeGenerate(options: GenerateOptions): Promise<GenerateR
     }
 
     try {
-      const result = await withSignal(adapter.generate(req), options.signal, provider);
+      const result = await withSignal(() => adapter.generate(req), options.signal, provider);
       return finalizeResult(result, provider, provider !== primary);
     } catch (error) {
       const normalized = ExpoAIError.from(error, provider);
@@ -309,34 +301,16 @@ export async function routeGenerateObjectWithMeta(options: GenerateObjectOptions
       continue;
     }
 
-    const objectReq: NormalizedObjectRequest = { ...baseReq, schema: options.schema };
-    if (options.schemaName !== undefined) objectReq.schemaName = options.schemaName;
-
     try {
       const validated = await withSignal(
-        generateValidatedObject({
-          provider,
-          schema: options.schema,
-          basePrompt: options.prompt,
-          ...(options.schemaName !== undefined ? { schemaName: options.schemaName } : {}),
-          ...(options.maxRepairAttempts !== undefined
-            ? { maxRepairAttempts: options.maxRepairAttempts }
-            : {}),
-          generateText: async (prompt) => (await adapter.generate({ ...baseReq, prompt })).text,
-          ...(adapter.generateObject
-            ? { nativeObject: async () => (await adapter.generateObject!(objectReq)).text }
-            : {}),
-        }),
+        () => generateValidatedObject(validatedObjectOptions(adapter, provider, options, baseReq)),
         options.signal,
         provider,
       );
-
-      const result = finalizeResult(
-        { text: validated.raw, raw: validated.object },
-        provider,
-        provider !== primary,
-      );
-      return { object: validated.object, result };
+      return {
+        object: validated.object,
+        result: finalizeObjectResult(validated, provider, provider !== primary),
+      };
     } catch (error) {
       const normalized = ExpoAIError.from(error, provider);
       lastError = normalized;
@@ -344,6 +318,29 @@ export async function routeGenerateObjectWithMeta(options: GenerateObjectOptions
     }
   }
   throw lastError ?? noProviderError();
+}
+
+/** The validate→repair options for one candidate (shared by generateObject and streamObject). */
+function validatedObjectOptions(
+  adapter: ExpoAIAdapter,
+  provider: ExpoAIProvider,
+  options: GenerateObjectOptions,
+  baseReq: NormalizedGenerateRequest,
+): GenerateValidatedObjectOptions {
+  const objectReq: NormalizedObjectRequest = { ...baseReq, schema: options.schema };
+  if (options.schemaName !== undefined) objectReq.schemaName = options.schemaName;
+  return {
+    provider,
+    schema: options.schema,
+    basePrompt: options.prompt,
+    mode: options.structuredOutput ?? 'auto',
+    ...(options.schemaName !== undefined ? { schemaName: options.schemaName } : {}),
+    ...(options.maxRepairAttempts !== undefined
+      ? { maxRepairAttempts: options.maxRepairAttempts }
+      : {}),
+    generateText: (prompt) => adapter.generate({ ...baseReq, prompt }),
+    ...(adapter.generateObject ? { nativeObject: () => adapter.generateObject!(objectReq) } : {}),
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -437,63 +434,60 @@ export function routeStreamObject<T = unknown>(
     const { adapter, provider, usedFallback } = selected;
 
     const baseReq = normalizeRequest(options);
-    const schemaPrompt = buildSchemaPrompt(options.prompt, options.schema, options.schemaName);
-    const streamReq: NormalizedGenerateRequest = { ...baseReq, prompt: schemaPrompt };
-
-    const source: StreamSource = {
-      provider,
-      usedFallback,
-      signal: streamReq.signal,
-      startNativeStream: adapter.stream ? (handlers) => adapter.stream!(streamReq, handlers) : null,
-      generateOnce: () => adapter.generate(streamReq),
-    };
+    // 'native' runs guided generation once (no token stream); 'auto' and
+    // 'emulated' stream the schema prompt and validate the streamed text.
+    const native = options.structuredOutput === 'native';
 
     let accumulated = '';
     let lastSnapshot: string | undefined;
-    try {
-      for await (const chunk of createStreamIterable(source)) {
-        if (chunk.type !== 'delta') continue;
-        accumulated += chunk.text;
-        textQueue.push(chunk.text);
-        const partial = parsePartialJson(accumulated);
-        if (partial === null) continue;
-        const serialized = JSON.stringify(partial);
-        if (serialized !== lastSnapshot) {
-          lastSnapshot = serialized;
-          partialQueue.push(partial as DeepPartial<T>);
+    let seedUsage: AdapterUsage | undefined;
+    if (!native) {
+      const schemaPrompt = buildSchemaPrompt(options.prompt, options.schema, options.schemaName);
+      const streamReq: NormalizedGenerateRequest = { ...baseReq, prompt: schemaPrompt };
+      const source: StreamSource = {
+        provider,
+        usedFallback,
+        signal: streamReq.signal,
+        startNativeStream: adapter.stream
+          ? (handlers) => adapter.stream!(streamReq, handlers)
+          : null,
+        generateOnce: () => adapter.generate(streamReq),
+      };
+      try {
+        for await (const chunk of createStreamIterable(source)) {
+          if (chunk.type === 'done') seedUsage = chunk.result.usage;
+          if (chunk.type !== 'delta') continue;
+          accumulated += chunk.text;
+          textQueue.push(chunk.text);
+          const partial = parsePartialJson(accumulated);
+          if (partial === null) continue;
+          const serialized = JSON.stringify(partial);
+          if (serialized !== lastSnapshot) {
+            lastSnapshot = serialized;
+            partialQueue.push(partial as DeepPartial<T>);
+          }
         }
+      } catch (error) {
+        fail(error, provider);
+        return;
       }
-    } catch (error) {
-      fail(error, provider);
-      return;
     }
     // textQueue is closed only after the whole operation succeeds (below), so a
     // failure during validation/repair — or a late abort — rejects textStream
     // too, honoring the StreamObjectResult contract (all views fail together).
 
-    const objectReq: NormalizedObjectRequest = { ...baseReq, schema: options.schema };
-    if (options.schemaName !== undefined) objectReq.schemaName = options.schemaName;
-
     try {
       const validated = await withSignal(
-        generateValidatedObject({
-          provider,
-          schema: options.schema,
-          basePrompt: options.prompt,
-          seedText: accumulated,
-          ...(options.schemaName !== undefined ? { schemaName: options.schemaName } : {}),
-          ...(options.maxRepairAttempts !== undefined
-            ? { maxRepairAttempts: options.maxRepairAttempts }
-            : {}),
-          generateText: async (prompt) => (await adapter.generate({ ...baseReq, prompt })).text,
-          ...(adapter.generateObject
-            ? { nativeObject: async () => (await adapter.generateObject!(objectReq)).text }
-            : {}),
-        }),
+        () =>
+          generateValidatedObject({
+            ...validatedObjectOptions(adapter, provider, options, baseReq),
+            ...(native ? {} : { seedText: accumulated, seedUsage }),
+          }),
         options.signal,
         provider,
       );
 
+      if (native) textQueue.push(validated.raw);
       // Ensure the final partial equals the validated object.
       if (JSON.stringify(validated.object) !== lastSnapshot) {
         partialQueue.push(validated.object as DeepPartial<T>);
@@ -501,13 +495,8 @@ export function routeStreamObject<T = unknown>(
       partialQueue.close();
       textQueue.close();
 
-      const result = finalizeResult(
-        { text: validated.raw, raw: validated.object },
-        provider,
-        usedFallback,
-      );
       resolveObject(validated.object as T);
-      resolveResult(result);
+      resolveResult(finalizeObjectResult(validated, provider, usedFallback));
     } catch (error) {
       fail(error, provider);
     }
@@ -529,11 +518,8 @@ type TaskKind = 'summarize' | 'rewrite' | 'proofread';
 
 export async function routeTask(
   kind: TaskKind,
-  options: {
+  options: ExpoAIRoutingOptions & {
     text: string;
-    provider?: ExpoAIProvider;
-    fallback?: ExpoAIFallback;
-    sensitive?: boolean;
     signal?: AbortSignal;
     style?: string;
     length?: string;
@@ -561,7 +547,7 @@ export async function routeTask(
 
     try {
       const native = adapter[kind];
-      const exec: Promise<AdapterGenerateResult> =
+      const exec = (): Promise<AdapterGenerateResult> =>
         typeof native === 'function'
           ? native.call(adapter, {
               ...baseReq,

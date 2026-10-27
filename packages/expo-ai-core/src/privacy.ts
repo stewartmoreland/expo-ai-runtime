@@ -5,7 +5,12 @@
  * apps can show honest UI copy. Derived from the chosen provider.
  */
 
-import type { ExpoAIPrivacyInfo, ExpoAIPrivacyMode, ExpoAIProvider } from './types.js';
+import type {
+  ExpoAIPrivacyInfo,
+  ExpoAIPrivacyMode,
+  ExpoAIPrivacyPolicy,
+  ExpoAIProvider,
+} from './types.js';
 
 /** Recommended, human-facing copy for each privacy mode. */
 export const PRIVACY_COPY: Record<ExpoAIPrivacyMode, string> = {
@@ -52,4 +57,58 @@ export function privacyInfoForProvider(provider: ExpoAIProvider): ExpoAIPrivacyI
 /** Convenience: the UI copy string for a provider. */
 export function privacyCopyForProvider(provider: ExpoAIProvider): string {
   return PRIVACY_COPY[privacyModeForProvider(provider)];
+}
+
+/* ------------------------------------------------------------------ */
+/* App-wide privacy policy                                            */
+/* ------------------------------------------------------------------ */
+
+/** Allows every real provider and mode, so the default changes nothing. */
+const DEFAULT_POLICY: Readonly<ExpoAIPrivacyPolicy> = Object.freeze({
+  allowedModes: ['on-device', 'apple-private-cloud-compute', 'third-party-cloud'],
+  allowedProviders: [
+    'apple-foundation-models',
+    'apple-private-cloud-compute',
+    'android-aicore-gemini-nano',
+    'litert-lm',
+    'cloud',
+  ],
+  sensitiveByDefault: false,
+  lock: false,
+} satisfies ExpoAIPrivacyPolicy);
+
+let current: Readonly<ExpoAIPrivacyPolicy> = DEFAULT_POLICY;
+
+/**
+ * Set the app-wide privacy ceiling. The router never routes outside it, even to
+ * an explicitly requested provider. Throws when the current policy is locked.
+ */
+export function setPrivacyPolicy(policy: ExpoAIPrivacyPolicy): void {
+  if (current.lock) throw new Error('[expo-ai] privacy policy is locked');
+  // Copy + freeze, so a caller mutating its arrays afterwards cannot widen the policy.
+  current = Object.freeze({
+    ...policy,
+    allowedModes: Object.freeze([...policy.allowedModes]) as ExpoAIPrivacyMode[],
+    allowedProviders: Object.freeze([...policy.allowedProviders]) as ExpoAIProvider[],
+  });
+}
+
+export function getPrivacyPolicy(): Readonly<ExpoAIPrivacyPolicy> {
+  return current;
+}
+
+/** True when the policy permits both the provider and its privacy mode. */
+export function isProviderAllowed(
+  provider: ExpoAIProvider,
+  policy: Readonly<ExpoAIPrivacyPolicy> = current,
+): boolean {
+  return (
+    policy.allowedProviders.includes(provider) &&
+    policy.allowedModes.includes(privacyModeForProvider(provider))
+  );
+}
+
+/** Test hook: restore the default policy, bypassing `lock`. Exported from `/testing` only. */
+export function resetPrivacyPolicy(): void {
+  current = DEFAULT_POLICY;
 }
