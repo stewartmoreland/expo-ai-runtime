@@ -16,6 +16,7 @@ export class ExpoAIError extends Error {
   retryable: boolean;
   fallbackRecommended: boolean;
   nativeMessage?: string;
+  detail?: string;
 }
 ```
 
@@ -33,6 +34,16 @@ export type ExpoAIErrorCode =
   | 'CANCELLED'
   | 'TIMEOUT'
   | 'NATIVE_PROVIDER_ERROR'
+  | 'QUOTA_EXHAUSTED'
+  | 'NETWORK_UNAVAILABLE'
+  | 'SERVICE_UNAVAILABLE'
+  | 'ENTITLEMENT_MISSING'
+  | 'REFUSAL'
+  | 'UNSUPPORTED_SCHEMA'
+  | 'UNSUPPORTED_LOCALE'
+  | 'TOOL_ERROR'
+  | 'CONCURRENT_REQUEST'
+  | 'BACKGROUND_NOT_ALLOWED'
   | 'UNKNOWN';
 ```
 
@@ -42,3 +53,41 @@ export type ExpoAIErrorCode =
   recovery, which the router uses when fallback is allowed.
 - **`nativeMessage`** preserves the original platform error for logging without leaking
   it into your normalized handling.
+- **`detail`** carries extra provider context when there is some: a model's refusal
+  explanation, the unsupported schema keyword, a quota reset date, or `used/limit`
+  tokens for a context overflow.
+
+## Defaults per code
+
+When a native module sends only a `code`, these defaults supply the flags.
+
+| Code                      | Retryable | Fallback recommended |
+| ------------------------- | --------- | -------------------- |
+| `UNAVAILABLE`             | no        | yes                  |
+| `UNSUPPORTED_DEVICE`      | no        | yes                  |
+| `MODEL_NOT_READY`         | yes       | yes                  |
+| `MODEL_DOWNLOAD_REQUIRED` | no        | yes                  |
+| `USER_SETTING_REQUIRED`   | no        | yes                  |
+| `INVALID_PROMPT`          | no        | no                   |
+| `CONTEXT_WINDOW_EXCEEDED` | no        | yes                  |
+| `SAFETY_BLOCKED`          | no        | no                   |
+| `RATE_LIMITED`            | yes       | yes                  |
+| `CANCELLED`               | no        | no                   |
+| `TIMEOUT`                 | yes       | yes                  |
+| `NATIVE_PROVIDER_ERROR`   | no        | yes                  |
+| `QUOTA_EXHAUSTED`         | no        | no                   |
+| `NETWORK_UNAVAILABLE`     | yes       | no                   |
+| `SERVICE_UNAVAILABLE`     | yes       | no                   |
+| `ENTITLEMENT_MISSING`     | no        | no                   |
+| `REFUSAL`                 | no        | no                   |
+| `UNSUPPORTED_SCHEMA`      | no        | no                   |
+| `UNSUPPORTED_LOCALE`      | no        | no                   |
+| `TOOL_ERROR`              | yes       | no                   |
+| `CONCURRENT_REQUEST`      | yes       | no                   |
+| `BACKGROUND_NOT_ALLOWED`  | yes       | no                   |
+| `UNKNOWN`                 | no        | yes                  |
+
+The new codes never recommend fallback, so a refusal, quota or network failure is never
+silently re-routed to another provider. An unavailable provider whose reason is
+`unsupported_locale`, `quota_exhausted` or `entitlement_missing` reports the matching
+code instead of `UNAVAILABLE`.

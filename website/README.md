@@ -29,14 +29,14 @@ npm run serve      # serve the production build locally
 
 ## Deploy (GitHub Pages)
 
-Configured for the project site at `https://stewmore.github.io/expo-ai-runtime/`.
+Configured for the project site at `https://stewartmoreland.github.io/expo-ai-runtime/`.
 
 ```bash
 # Using SSH:
 USE_SSH=true npm run deploy
 
 # Or with a username:
-GIT_USER=stewmore npm run deploy
+GIT_USER=stewartmoreland npm run deploy
 ```
 
 This builds the site and pushes to the `gh-pages` branch. Alternatively, deploy `build/`

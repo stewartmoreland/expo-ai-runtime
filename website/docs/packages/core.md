@@ -22,12 +22,23 @@ export namespace ExpoAI {
   export function getAvailability(): Promise<ExpoAIAvailability>;
   export function getCapabilities(): Promise<ExpoAICapabilities>;
   export function listProviders(): Promise<ExpoAIProviderInfo[]>;
+  export function onAvailabilityChange(
+    cb: (availability: ExpoAIAvailability) => void,
+  ): ExpoAISubscription;
+
+  export function setPrivacyPolicy(policy: ExpoAIPrivacyPolicy): void;
+  export function getPrivacyPolicy(): Readonly<ExpoAIPrivacyPolicy>;
+  export function prewarm(options?: PrewarmOptions): Promise<boolean>;
 
   export function generate(options: GenerateOptions): Promise<GenerateResult>;
   export function stream(options: GenerateOptions): AsyncIterable<GenerateChunk>;
 
   export function createSession(options?: CreateSessionOptions): Promise<ExpoAISession>;
   export function generateObject<T>(options: GenerateObjectOptions): Promise<T>;
+  export function generateObjectWithMeta<T>(
+    options: GenerateObjectOptions,
+  ): Promise<{ object: T; result: GenerateResult }>;
+  export function streamObject<T>(options: StreamObjectOptions): StreamObjectResult<T>;
 
   export function summarize(options: SummarizeOptions): Promise<GenerateResult>;
   export function rewrite(options: RewriteOptions): Promise<GenerateResult>;
@@ -37,6 +48,11 @@ export namespace ExpoAI {
 
 The native adapters are registered against the core registry by importing their package
 (a side-effect import). The core itself never depends on a native module.
+
+Every `GenerateResult` carries `provider`, `privacy`, `usedFallback`, and `usage` (see
+[token usage](../concepts/providers.md#token-usage)). `GenerateOptions` also accepts
+`reasoningLevel` (`'light' | 'moderate' | 'deep'`), a hint used by Apple Private Cloud
+Compute and ignored elsewhere.
 
 ## Related concepts
 

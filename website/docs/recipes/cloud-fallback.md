@@ -20,9 +20,10 @@ function Summarize({ note, sensitive }: { note: string; sensitive: boolean }) {
   async function run() {
     await generate({
       prompt: `Summarize:\n\n${note}`,
-      // Opt in to cloud fallback when on-device is unavailable…
-      fallback: 'cloud',
-      // …but mark sensitive prompts so they never reach a third-party cloud.
+      // Opt in to off-device fallback when on-device is unavailable…
+      fallback: 'any',
+      // …but keep sensitive prompts away from a third-party cloud.
+      // (fallback: 'cloud' would let them through.)
       sensitive,
     });
   }
@@ -45,11 +46,16 @@ function Summarize({ note, sensitive }: { note: string; sensitive: boolean }) {
 
 ## The rules
 
-- **`fallback`** is `'none'` by default. Set `'cloud'` (or `'any'`) to allow off-device.
-- A prompt marked **`sensitive: true`** is never sent to a third-party cloud, even with
-  `fallback: 'cloud'` — the router fails locally instead.
-- Apple **Private Cloud Compute** is treated as on-device-grade for privacy and is not
-  gated by `sensitive`.
+- **`fallback`** is `'none'` by default, which keeps every request on-device. Set
+  `'cloud'` or `'any'` to allow off-device providers (Apple Private Cloud Compute and
+  `cloud`).
+- A prompt marked **`sensitive: true`** reaches a third-party cloud only with
+  `fallback: 'cloud'` (or an explicit `provider: 'cloud'`). With `fallback: 'any'`, the
+  router fails instead of sending it there.
+- Apple **Private Cloud Compute** is not gated by `sensitive`, but it is off-device, so
+  it still needs `fallback` other than `'none'` unless requested explicitly.
+- For a hard block that no request can override, use
+  [`ExpoAI.setPrivacyPolicy`](../concepts/privacy.md#app-wide-privacy-policy).
 
 See the [privacy model](../concepts/privacy.md) and
 [providers & routing](../concepts/providers.md) for the full policy.

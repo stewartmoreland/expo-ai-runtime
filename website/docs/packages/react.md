@@ -109,12 +109,15 @@ function Recipe() {
 }
 ```
 
-`{ submit, object, isLoading, error, stop, reset }`. `object` is a `DeepPartial<T>`
-while streaming and the validated `T` once complete.
+`{ submit, object, result, isLoading, error, stop, reset }`. `object` is a
+`DeepPartial<T>` while streaming and the validated `T` once complete. `result` is the
+final `GenerateResult` (`provider`, `privacy`, `usage`, `structured`), or `null` until
+then. `submit` resolves `{ object, result }`, or `undefined` if it fails or is stopped.
 
 ## useCapabilities
 
-What the runtime can do on this device — resolved on mount, re-queryable.
+What the runtime can do on this device — resolved on mount, refreshed automatically when
+availability changes.
 
 ```tsx
 import { useCapabilities } from '@stewmore/expo-ai-react';
@@ -127,6 +130,7 @@ function Gate() {
 }
 ```
 
-`{ capabilities, availability, providers, loading, error, refresh }`. Call
-`refresh()` after the user enables Apple Intelligence or finishes a model
-download. See [capability detection](../concepts/capabilities.mdx).
+`{ capabilities, availability, providers, loading, error, refresh }`. The hook
+subscribes to `ExpoAI.onAvailabilityChange`, so it re-queries when the app returns to
+the foreground or a model download finishes. Call `refresh()` for anything else. See
+[capability detection](../concepts/capabilities.mdx#reacting-to-changes).
