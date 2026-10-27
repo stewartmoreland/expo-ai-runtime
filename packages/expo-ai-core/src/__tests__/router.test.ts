@@ -159,6 +159,25 @@ describe('provider router — zero-config first-run messaging', () => {
       code: 'UNSUPPORTED_LOCALE',
     });
   });
+
+  it('skips a quota-exhausted provider under fallback, fails with QUOTA_EXHAUSTED without it', async () => {
+    registerAdapter(
+      createMockAdapter({
+        provider: 'apple-private-cloud-compute',
+        available: false,
+        reasonUnavailable: 'quota_exhausted',
+      }),
+    );
+    registerAdapter(createMockAdapter({ provider: 'cloud', respondWith: 'cloud!' }));
+    const provider = 'apple-private-cloud-compute';
+
+    await expect(ExpoAI.generate({ prompt: 'hi', provider })).rejects.toMatchObject({
+      code: 'QUOTA_EXHAUSTED',
+    });
+    const result = await ExpoAI.generate({ prompt: 'hi', provider, fallback: 'any' });
+    expect(result.provider).toBe('cloud');
+    expect(result.usedFallback).toBe(true);
+  });
 });
 
 describe('provider router — fallback', () => {

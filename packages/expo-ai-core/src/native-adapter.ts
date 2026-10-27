@@ -140,9 +140,13 @@ function mapResult(result: NativeGenerateResult): AdapterGenerateResult {
   return mapped;
 }
 
-/** Throw an error-as-value native result as a typed {@link ExpoAIError}. */
+/**
+ * Throw an error-as-value native result as a typed {@link ExpoAIError}. The adapter's
+ * provider is authoritative: one native module backs several providers (on-device and
+ * PCC), so a payload's own `provider` can name the wrong one.
+ */
 function unwrap(result: NativeGenerateResult, provider: ExpoAIProvider): AdapterGenerateResult {
-  if (result.error) throw ExpoAIError.from(result.error, provider);
+  if (result.error) throw ExpoAIError.from({ ...result.error, provider }, provider);
   return mapResult(result);
 }
 
@@ -209,8 +213,9 @@ function bridgeNativeStream(
       case 'done':
         settled = true;
         subscription.remove();
-        if (event.result?.error) handlers.onError(ExpoAIError.from(event.result.error, provider));
-        else handlers.onDone(resolveDoneResult(event.result, accumulated));
+        if (event.result?.error) {
+          handlers.onError(ExpoAIError.from({ ...event.result.error, provider }, provider));
+        } else handlers.onDone(resolveDoneResult(event.result, accumulated));
         break;
       case 'error':
         settled = true;

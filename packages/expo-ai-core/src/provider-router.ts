@@ -424,6 +424,23 @@ export function routeStreamObject<T = unknown>(
       return;
     }
 
+    // 'native' runs guided generation once (no token stream), through
+    // generateObject's candidate loop so a provider without it is skipped.
+    if (options.structuredOutput === 'native') {
+      try {
+        const { object, result } = await routeGenerateObjectWithMeta(options);
+        textQueue.push(result.text);
+        partialQueue.push(object as DeepPartial<T>);
+        partialQueue.close();
+        textQueue.close();
+        resolveObject(object as T);
+        resolveResult(result);
+      } catch (error) {
+        fail(error, (error as ExpoAIError).provider ?? 'none');
+      }
+      return;
+    }
+
     let selected: { adapter: ExpoAIAdapter; provider: ExpoAIProvider; usedFallback: boolean };
     try {
       selected = await selectAvailableAdapter(options);
@@ -434,43 +451,36 @@ export function routeStreamObject<T = unknown>(
     const { adapter, provider, usedFallback } = selected;
 
     const baseReq = normalizeRequest(options);
-    // 'native' runs guided generation once (no token stream); 'auto' and
-    // 'emulated' stream the schema prompt and validate the streamed text.
-    const native = options.structuredOutput === 'native';
-
+    // 'auto' and 'emulated' stream the schema prompt and validate the streamed text.
     let accumulated = '';
     let lastSnapshot: string | undefined;
     let seedUsage: AdapterUsage | undefined;
-    if (!native) {
-      const schemaPrompt = buildSchemaPrompt(options.prompt, options.schema, options.schemaName);
-      const streamReq: NormalizedGenerateRequest = { ...baseReq, prompt: schemaPrompt };
-      const source: StreamSource = {
-        provider,
-        usedFallback,
-        signal: streamReq.signal,
-        startNativeStream: adapter.stream
-          ? (handlers) => adapter.stream!(streamReq, handlers)
-          : null,
-        generateOnce: () => adapter.generate(streamReq),
-      };
-      try {
-        for await (const chunk of createStreamIterable(source)) {
-          if (chunk.type === 'done') seedUsage = chunk.result.usage;
-          if (chunk.type !== 'delta') continue;
-          accumulated += chunk.text;
-          textQueue.push(chunk.text);
-          const partial = parsePartialJson(accumulated);
-          if (partial === null) continue;
-          const serialized = JSON.stringify(partial);
-          if (serialized !== lastSnapshot) {
-            lastSnapshot = serialized;
-            partialQueue.push(partial as DeepPartial<T>);
-          }
+    const schemaPrompt = buildSchemaPrompt(options.prompt, options.schema, options.schemaName);
+    const streamReq: NormalizedGenerateRequest = { ...baseReq, prompt: schemaPrompt };
+    const source: StreamSource = {
+      provider,
+      usedFallback,
+      signal: streamReq.signal,
+      startNativeStream: adapter.stream ? (handlers) => adapter.stream!(streamReq, handlers) : null,
+      generateOnce: () => adapter.generate(streamReq),
+    };
+    try {
+      for await (const chunk of createStreamIterable(source)) {
+        if (chunk.type === 'done') seedUsage = chunk.result.usage;
+        if (chunk.type !== 'delta') continue;
+        accumulated += chunk.text;
+        textQueue.push(chunk.text);
+        const partial = parsePartialJson(accumulated);
+        if (partial === null) continue;
+        const serialized = JSON.stringify(partial);
+        if (serialized !== lastSnapshot) {
+          lastSnapshot = serialized;
+          partialQueue.push(partial as DeepPartial<T>);
         }
-      } catch (error) {
-        fail(error, provider);
-        return;
       }
+    } catch (error) {
+      fail(error, provider);
+      return;
     }
     // textQueue is closed only after the whole operation succeeds (below), so a
     // failure during validation/repair — or a late abort — rejects textStream
@@ -481,13 +491,13 @@ export function routeStreamObject<T = unknown>(
         () =>
           generateValidatedObject({
             ...validatedObjectOptions(adapter, provider, options, baseReq),
-            ...(native ? {} : { seedText: accumulated, seedUsage }),
+            seedText: accumulated,
+            seedUsage,
           }),
         options.signal,
         provider,
       );
 
-      if (native) textQueue.push(validated.raw);
       // Ensure the final partial equals the validated object.
       if (JSON.stringify(validated.object) !== lastSnapshot) {
         partialQueue.push(validated.object as DeepPartial<T>);

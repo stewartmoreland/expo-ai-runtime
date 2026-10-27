@@ -176,6 +176,23 @@ describe('ExpoAI.streamObject', () => {
     expect((await handle.result).structured?.mode).toBe('native');
   });
 
+  it("'native' skips a provider without guided generation", async () => {
+    registerAdapter(
+      createMockAdapter({ provider: 'android-aicore-gemini-nano', respondWith: 'UNUSED' }),
+    );
+    registerAdapter(
+      createMockAdapter({ provider: 'cloud', objectText: '{"name":"Ada","age":36}' }),
+    );
+    const handle = ExpoAI.streamObject({
+      prompt: 'a person',
+      schema: personSchema,
+      structuredOutput: 'native',
+      fallback: 'cloud',
+    });
+    expect(await handle.object).toEqual({ name: 'Ada', age: 36 });
+    expect((await handle.result).provider).toBe('cloud');
+  });
+
   it('exposes the raw text deltas via textStream', async () => {
     registerAdapter(
       createMockAdapter({

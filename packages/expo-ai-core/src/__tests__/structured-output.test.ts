@@ -287,6 +287,29 @@ describe('structured output modes', () => {
     expect(partial.usage).toEqual({ source: 'unavailable' });
   });
 
+  it('counts the usage of a blank seed that was re-generated', async () => {
+    const result = await generateValidatedObject({
+      provider: 'apple-foundation-models',
+      schema: personSchema,
+      basePrompt: 'extract',
+      seedText: '   ',
+      seedUsage: { inputTokens: 5, outputTokens: 1 },
+      nativeObject: async () => ({ text: person, usage: { inputTokens: 5, outputTokens: 4 } }),
+      generateText: async () => person,
+    });
+    expect(result.usage).toEqual({ inputTokens: 10, outputTokens: 5 });
+
+    const unreported = await generateValidatedObject({
+      provider: 'apple-foundation-models',
+      schema: personSchema,
+      basePrompt: 'extract',
+      seedText: '',
+      nativeObject: async () => ({ text: person, usage: { inputTokens: 5, outputTokens: 4 } }),
+      generateText: async () => person,
+    });
+    expect(unreported.usage).toEqual({ source: 'unavailable' });
+  });
+
   it('stamps usage on generateObjectWithMeta results', async () => {
     registerAdapter(
       createMockAdapter({
