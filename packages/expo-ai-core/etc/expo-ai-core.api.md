@@ -8,7 +8,7 @@
 export type AdapterGenerateResult = {
     text: string;
     finishReason?: ExpoAIFinishReason;
-    usage?: ExpoAIUsage;
+    usage?: AdapterUsage;
     raw?: unknown;
 };
 
@@ -29,6 +29,9 @@ export interface AdapterSession {
     generateObject?(req: NormalizedObjectRequest): Promise<AdapterGenerateResult>;
     // (undocumented)
     readonly id: string;
+    prewarm?(opts: {
+        promptPrefix?: string;
+    }): Promise<boolean>;
     // (undocumented)
     readonly provider: ExpoAIProvider;
     // (undocumented)
@@ -52,6 +55,11 @@ export type AdapterTaskRequest = NormalizedGenerateRequest & {
 };
 
 // @public
+export type AdapterUsage = Omit<ExpoAIUsage, 'source'> & {
+    source?: ExpoAIUsageSource;
+};
+
+// @public
 export class AsyncQueue<T> implements AsyncIterable<T> {
     // (undocumented)
     [Symbol.asyncIterator](): AsyncIterator<T>;
@@ -62,11 +70,7 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
 }
 
 // @public
-export function buildCandidateList(options: {
-    provider?: ExpoAIProvider;
-    fallback?: ExpoAIFallback;
-    sensitive?: boolean;
-}): ExpoAIProvider[];
+export function buildCandidateList(options: ExpoAIRoutingOptions): ExpoAIProvider[];
 
 // @public (undocumented)
 export function buildRepairPrompt(basePrompt: string, schema: JSONSchema, previousOutput: string, errors: string[], schemaName?: string): string;
@@ -91,6 +95,8 @@ export type CreateSessionOptions = {
     temperature?: number;
     maxOutputTokens?: number;
     metadata?: Record<string, string>;
+    sensitive?: boolean;
+    reasoningLevel?: ExpoAIReasoningLevel;
 };
 
 // @public
@@ -109,10 +115,18 @@ export const ExpoAI: {
     readonly getAvailability: typeof getAvailability;
     readonly getCapabilities: typeof getCapabilities;
     readonly listProviders: typeof listProviders;
+    readonly onAvailabilityChange: typeof onAvailabilityChange;
+    readonly setPrivacyPolicy: typeof setPrivacyPolicy;
+    readonly getPrivacyPolicy: typeof getPrivacyPolicy;
+    readonly prewarm: (options?: PrewarmOptions) => Promise<boolean>;
     readonly generate: (options: GenerateOptions) => Promise<GenerateResult>;
     readonly stream: (options: GenerateOptions) => AsyncIterable<GenerateChunk>;
     readonly createSession: (options?: CreateSessionOptions) => Promise<ExpoAISession>;
     readonly generateObject: <T = unknown>(options: GenerateObjectOptions) => Promise<T>;
+    readonly generateObjectWithMeta: <T = unknown>(options: GenerateObjectOptions) => Promise<{
+        object: T;
+        result: GenerateResult;
+    }>;
     readonly streamObject: <T = unknown>(options: StreamObjectOptions) => StreamObjectResult<T>;
     readonly summarize: (options: SummarizeOptions) => Promise<GenerateResult>;
     readonly rewrite: (options: RewriteOptions) => Promise<GenerateResult>;
@@ -133,6 +147,10 @@ export interface ExpoAIAdapter {
     getAvailability(): Promise<ExpoAIAvailability>;
     // (undocumented)
     getCapabilities(): Promise<ExpoAICapabilities>;
+    prewarm?(opts: {
+        instructions?: string;
+        promptPrefix?: string;
+    }): Promise<boolean>;
     // (undocumented)
     proofread?(req: AdapterTaskRequest): Promise<AdapterGenerateResult>;
     // (undocumented)
@@ -150,6 +168,7 @@ export type ExpoAIAvailability = {
     available: boolean;
     provider: ExpoAIProvider;
     reasonUnavailable?: ExpoAIUnavailableReason;
+    supportedLanguages?: string[];
 };
 
 // @public
@@ -181,6 +200,8 @@ export class ExpoAIError extends Error {
     // (undocumented)
     readonly code: ExpoAIErrorCode;
     // (undocumented)
+    readonly detail?: string;
+    // (undocumented)
     readonly fallbackRecommended: boolean;
     static from(value: unknown, provider: ExpoAIProvider): ExpoAIError;
     // (undocumented)
@@ -190,11 +211,13 @@ export class ExpoAIError extends Error {
     // (undocumented)
     readonly retryable: boolean;
     // (undocumented)
-    toJSON(): Required<Omit<ExpoAIErrorParams, 'cause'>>;
+    toJSON(): Required<Omit<ExpoAIErrorParams, 'cause' | 'detail'>> & {
+        detail?: string;
+    };
 }
 
 // @public (undocumented)
-export type ExpoAIErrorCode = 'UNAVAILABLE' | 'UNSUPPORTED_DEVICE' | 'MODEL_NOT_READY' | 'MODEL_DOWNLOAD_REQUIRED' | 'USER_SETTING_REQUIRED' | 'INVALID_PROMPT' | 'CONTEXT_WINDOW_EXCEEDED' | 'SAFETY_BLOCKED' | 'RATE_LIMITED' | 'CANCELLED' | 'TIMEOUT' | 'NATIVE_PROVIDER_ERROR' | 'UNKNOWN';
+export type ExpoAIErrorCode = 'UNAVAILABLE' | 'UNSUPPORTED_DEVICE' | 'MODEL_NOT_READY' | 'MODEL_DOWNLOAD_REQUIRED' | 'USER_SETTING_REQUIRED' | 'INVALID_PROMPT' | 'CONTEXT_WINDOW_EXCEEDED' | 'SAFETY_BLOCKED' | 'RATE_LIMITED' | 'CANCELLED' | 'TIMEOUT' | 'NATIVE_PROVIDER_ERROR' | 'QUOTA_EXHAUSTED' | 'NETWORK_UNAVAILABLE' | 'SERVICE_UNAVAILABLE' | 'ENTITLEMENT_MISSING' | 'REFUSAL' | 'UNSUPPORTED_SCHEMA' | 'UNSUPPORTED_LOCALE' | 'TOOL_ERROR' | 'CONCURRENT_REQUEST' | 'BACKGROUND_NOT_ALLOWED' | 'UNKNOWN';
 
 // @public (undocumented)
 export type ExpoAIErrorParams = {
@@ -204,6 +227,7 @@ export type ExpoAIErrorParams = {
     retryable?: boolean;
     fallbackRecommended?: boolean;
     nativeMessage?: string;
+    detail?: string;
     cause?: unknown;
 };
 
@@ -215,6 +239,7 @@ export type ExpoAIErrorPayload = {
     retryable?: boolean;
     fallbackRecommended?: boolean;
     nativeMessage?: string;
+    detail?: string;
 };
 
 // @public
@@ -238,12 +263,30 @@ export type ExpoAIPrivacyInfo = {
 export type ExpoAIPrivacyMode = 'on-device' | 'apple-private-cloud-compute' | 'third-party-cloud' | 'unknown';
 
 // @public
+export type ExpoAIPrivacyPolicy = {
+    allowedModes: ExpoAIPrivacyMode[];
+    allowedProviders: ExpoAIProvider[];
+    sensitiveByDefault?: boolean;
+    lock?: boolean;
+};
+
+// @public
 export type ExpoAIProvider = 'system-preferred' | 'apple-foundation-models' | 'apple-private-cloud-compute' | 'android-aicore-gemini-nano' | 'litert-lm' | 'cloud' | 'none';
 
 // @public
 export type ExpoAIProviderInfo = {
     provider: ExpoAIProvider;
     capabilities: ExpoAICapabilities;
+};
+
+// @public
+export type ExpoAIReasoningLevel = 'light' | 'moderate' | 'deep';
+
+// @public
+export type ExpoAIRoutingOptions = {
+    provider?: ExpoAIProvider;
+    fallback?: ExpoAIFallback;
+    sensitive?: boolean;
 };
 
 // @public (undocumented)
@@ -254,8 +297,15 @@ export interface ExpoAISession {
     generate(options: SessionGenerateOptions): Promise<GenerateResult>;
     // (undocumented)
     generateObject<T = unknown>(options: SessionGenerateObjectOptions): Promise<T>;
+    generateObjectWithMeta<T = unknown>(options: SessionGenerateObjectOptions): Promise<{
+        object: T;
+        result: GenerateResult;
+    }>;
     // (undocumented)
     readonly id: string;
+    prewarm(options?: {
+        promptPrefix?: string;
+    }): Promise<boolean>;
     // (undocumented)
     readonly provider: ExpoAIProvider;
     // (undocumented)
@@ -265,14 +315,35 @@ export interface ExpoAISession {
 }
 
 // @public
-export type ExpoAIUnavailableReason = 'unsupported_os_version' | 'unsupported_device' | 'model_not_downloaded' | 'model_initializing' | 'apple_intelligence_disabled' | 'aicore_unavailable' | 'aicore_initializing' | 'unsupported_bootloader_state' | 'missing_dependency' | 'provider_not_configured' | 'unknown';
+export type ExpoAIStructuredMeta = {
+    mode: 'native' | 'emulated';
+    attempts: number;
+    usedRepair: boolean;
+};
+
+// @public
+export type ExpoAIStructuredOutputMode = 'native' | 'emulated' | 'auto';
+
+// @public
+export type ExpoAISubscription = {
+    remove(): void;
+};
+
+// @public
+export type ExpoAIUnavailableReason = 'unsupported_os_version' | 'unsupported_device' | 'model_not_downloaded' | 'model_initializing' | 'apple_intelligence_disabled' | 'aicore_unavailable' | 'aicore_initializing' | 'unsupported_bootloader_state' | 'missing_dependency' | 'provider_not_configured' | 'unsupported_locale' | 'quota_exhausted' | 'entitlement_missing' | 'unknown';
 
 // @public
 export type ExpoAIUsage = {
     inputTokens?: number;
     outputTokens?: number;
     totalTokens?: number;
+    cachedInputTokens?: number;
+    reasoningTokens?: number;
+    source: ExpoAIUsageSource;
 };
+
+// @public
+export type ExpoAIUsageSource = 'provider' | 'estimated' | 'unavailable';
 
 // @public
 export function extractJson(text: string): string | null;
@@ -298,6 +369,7 @@ export type GenerateObjectOptions = GenerateOptions & {
     schema: JSONSchema;
     schemaName?: string;
     maxRepairAttempts?: number;
+    structuredOutput?: ExpoAIStructuredOutputMode;
 };
 
 // @public
@@ -308,6 +380,7 @@ export type GenerateOptions = {
     instructions?: string;
     temperature?: number;
     maxOutputTokens?: number;
+    reasoningLevel?: ExpoAIReasoningLevel;
     sensitive?: boolean;
     model?: LocalModelConfig;
     metadata?: Record<string, string>;
@@ -321,7 +394,8 @@ export type GenerateResult = {
     privacy: ExpoAIPrivacyInfo;
     usedFallback: boolean;
     finishReason?: ExpoAIFinishReason;
-    usage?: ExpoAIUsage;
+    usage: ExpoAIUsage;
+    structured?: ExpoAIStructuredMeta;
     raw?: unknown;
 };
 
@@ -335,9 +409,11 @@ export type GenerateValidatedObjectOptions = {
     basePrompt: string;
     schemaName?: string;
     maxRepairAttempts?: number;
-    generateText: (prompt: string) => Promise<string>;
-    nativeObject?: () => Promise<string>;
+    generateText: (prompt: string) => Promise<string | AdapterGenerateResult>;
+    nativeObject?: () => Promise<string | AdapterGenerateResult>;
     seedText?: string;
+    seedUsage?: AdapterUsage;
+    mode?: ExpoAIStructuredOutputMode;
 };
 
 // @public (undocumented)
@@ -353,6 +429,9 @@ export function getAvailability(): Promise<ExpoAIAvailability>;
 export function getCapabilities(): Promise<ExpoAICapabilities>;
 
 // @public (undocumented)
+export function getPrivacyPolicy(): Readonly<ExpoAIPrivacyPolicy>;
+
+// @public (undocumented)
 export function getRegisteredProviders(): ExpoAIProvider[];
 
 // @public (undocumented)
@@ -360,6 +439,9 @@ export function hasAdapter(provider: ExpoAIProvider): boolean;
 
 // @public
 export function isExpoAIErrorCode(value: unknown): value is ExpoAIErrorCode;
+
+// @public
+export function isProviderAllowed(provider: ExpoAIProvider, policy?: Readonly<ExpoAIPrivacyPolicy>): boolean;
 
 // @public (undocumented)
 export interface JSONSchema {
@@ -418,6 +500,8 @@ export type NativeAvailability = {
     available: boolean;
     provider?: string;
     reasonUnavailable?: string;
+    supportedLanguages?: string[];
+    contextWindow?: number;
 };
 
 // @public
@@ -431,7 +515,11 @@ export type NativeGenerateResult = {
         inputTokens?: number;
         outputTokens?: number;
         totalTokens?: number;
+        cachedInputTokens?: number;
+        reasoningTokens?: number;
+        source?: string;
     };
+    error?: Record<string, unknown>;
 };
 
 // @public (undocumented)
@@ -447,6 +535,7 @@ export type NativeStreamEvent = {
 export interface NativeStreamingModule {
     // (undocumented)
     addListener(eventName: 'onExpoAIStream', listener: (event: NativeStreamEvent) => void): NativeSubscription;
+    cancel?(requestId: string): Promise<void>;
     // (undocumented)
     cancelStreaming(requestId: string): Promise<void>;
     // (undocumented)
@@ -460,8 +549,13 @@ export interface NativeStreamingModule {
     generate(options: Record<string, unknown>): Promise<NativeGenerateResult>;
     // (undocumented)
     generateInSession?(sessionId: string, options: Record<string, unknown>): Promise<NativeGenerateResult>;
+    generateObject?(options: Record<string, unknown>): Promise<NativeGenerateResult>;
     // (undocumented)
     getAvailability(): Promise<NativeAvailability>;
+    // (undocumented)
+    prewarm?(options: Record<string, unknown>): Promise<boolean>;
+    // (undocumented)
+    prewarmSession?(sessionId: string, options: Record<string, unknown>): Promise<boolean>;
     // (undocumented)
     resetSession?(sessionId: string): Promise<void>;
     // (undocumented)
@@ -479,6 +573,7 @@ export type NormalizedGenerateRequest = {
     instructions?: string;
     temperature?: number;
     maxOutputTokens?: number;
+    reasoningLevel?: ExpoAIReasoningLevel;
     metadata?: Record<string, string>;
     signal?: AbortSignal;
     model?: LocalModelConfig;
@@ -493,6 +588,12 @@ export type NormalizedObjectRequest = NormalizedGenerateRequest & {
 // @public (undocumented)
 export function normalizeRequest(options: GenerateOptions): NormalizedGenerateRequest;
 
+// @public
+export function notifyAvailabilityChange(provider: ExpoAIProvider): void;
+
+// @public
+export function onAvailabilityChange(callback: (availability: ExpoAIAvailability) => void): ExpoAISubscription;
+
 // Warning: (ae-forgotten-export) The symbol "ParseResult" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
@@ -500,6 +601,13 @@ export function parseJson(text: string): ParseResult;
 
 // @public
 export function parsePartialJson(text: string): unknown | null;
+
+// @public
+export type PrewarmOptions = {
+    provider?: ExpoAIProvider;
+    instructions?: string;
+    promptPrefix?: string;
+};
 
 // @public
 export const PRIVACY_COPY: Record<ExpoAIPrivacyMode, string>;
@@ -562,22 +670,15 @@ export function routeStreamObject<T = unknown>(options: StreamObjectOptions): St
 // Warning: (ae-forgotten-export) The symbol "TaskKind" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export function routeTask(kind: TaskKind, options: {
+export function routeTask(kind: TaskKind, options: ExpoAIRoutingOptions & {
     text: string;
-    provider?: ExpoAIProvider;
-    fallback?: ExpoAIFallback;
-    sensitive?: boolean;
     signal?: AbortSignal;
     style?: string;
     length?: string;
 }): Promise<GenerateResult>;
 
 // @public
-export function selectAvailableAdapter(options: {
-    provider?: ExpoAIProvider;
-    fallback?: ExpoAIFallback;
-    sensitive?: boolean;
-}): Promise<{
+export function selectAvailableAdapter(options: ExpoAIRoutingOptions): Promise<{
     adapter: ExpoAIAdapter;
     provider: ExpoAIProvider;
     usedFallback: boolean;
@@ -588,6 +689,7 @@ export type SessionGenerateObjectOptions = SessionGenerateOptions & {
     schema: JSONSchema;
     schemaName?: string;
     maxRepairAttempts?: number;
+    structuredOutput?: ExpoAIStructuredOutputMode;
 };
 
 // @public (undocumented)
@@ -597,6 +699,9 @@ export type SessionGenerateOptions = {
     maxOutputTokens?: number;
     signal?: AbortSignal;
 };
+
+// @public
+export function setPrivacyPolicy(policy: ExpoAIPrivacyPolicy): void;
 
 // @public (undocumented)
 export type StreamHandle = {
@@ -639,6 +744,8 @@ export type ValidatedObjectResult = {
     raw: string;
     attempts: number;
     usedRepair: boolean;
+    mode: 'native' | 'emulated';
+    usage?: AdapterUsage;
 };
 
 // @public (undocumented)

@@ -30,6 +30,8 @@ export {
   getCapabilities,
   listProviders,
   unavailableCapabilities,
+  onAvailabilityChange,
+  notifyAvailabilityChange,
 } from './capability-registry.js';
 
 // Privacy.
@@ -39,6 +41,9 @@ export {
   privacyModeForProvider,
   providerSendsPromptOffDevice,
   privacyCopyForProvider,
+  setPrivacyPolicy,
+  getPrivacyPolicy,
+  isProviderAllowed,
 } from './privacy.js';
 
 // Routing (advanced consumers, evals).

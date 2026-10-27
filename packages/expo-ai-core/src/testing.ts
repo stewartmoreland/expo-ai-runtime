@@ -11,12 +11,15 @@ import type {
   AdapterRewriteRequest,
   AdapterStreamHandlers,
   AdapterTaskRequest,
+  AdapterUsage,
   ExpoAIAdapter,
   NormalizedGenerateRequest,
   NormalizedObjectRequest,
   StreamHandle,
 } from './adapter.js';
 import { ExpoAIError } from './errors.js';
+
+export { resetPrivacyPolicy } from './privacy.js';
 import type {
   ExpoAIAvailability,
   ExpoAICapabilities,
@@ -43,6 +46,10 @@ export type MockAdapterConfig = {
   throwOnce?: unknown;
   /** Per-token delay (ms) for streaming. */
   delayMs?: number;
+  /** Usage reported on every result. Omit to report none. */
+  usage?: AdapterUsage;
+  /** Expose `prewarm`, resolving to this value. Omit to leave `prewarm` undefined. */
+  prewarm?: boolean;
 };
 
 const DEFAULT_CAPABILITIES: Omit<ExpoAICapabilities, 'provider'> = {
@@ -74,6 +81,7 @@ export class MockAdapter implements ExpoAIAdapter {
   summarize?: (req: AdapterTaskRequest) => Promise<AdapterGenerateResult>;
   rewrite?: (req: AdapterRewriteRequest) => Promise<AdapterGenerateResult>;
   proofread?: (req: AdapterTaskRequest) => Promise<AdapterGenerateResult>;
+  prewarm?: (opts: { instructions?: string; promptPrefix?: string }) => Promise<boolean>;
 
   constructor(private readonly config: MockAdapterConfig = {}) {
     this.provider = config.provider ?? 'cloud';
@@ -91,7 +99,12 @@ export class MockAdapter implements ExpoAIAdapter {
               ? config.objectText(req)
               : (config.objectText as string),
           finishReason: 'stop',
+          ...(config.usage ? { usage: config.usage } : {}),
         });
+    }
+    if (config.prewarm !== undefined) {
+      const prewarmed = config.prewarm;
+      this.prewarm = () => Promise.resolve(prewarmed);
     }
     if (config.supportsTasks) {
       this.summarize = (req) => this.produce(`summary of: ${req.text}`);
@@ -133,7 +146,11 @@ export class MockAdapter implements ExpoAIAdapter {
       this.threwOnce = true;
       throw ExpoAIError.from(this.config.throwOnce, this.provider);
     }
-    return { text: this.replyFor(prompt), finishReason: 'stop' };
+    return {
+      text: this.replyFor(prompt),
+      finishReason: 'stop',
+      ...(this.config.usage ? { usage: this.config.usage } : {}),
+    };
   }
 
   private streamImpl(

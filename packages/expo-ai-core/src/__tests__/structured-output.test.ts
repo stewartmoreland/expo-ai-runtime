@@ -1,14 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   ExpoAI,
+  ExpoAIError,
   clearAdapters,
   extractJson,
+  generateValidatedObject,
   registerAdapter,
   validateAgainstSchema,
   type JSONSchema,
 } from '../index.js';
-import { createMockAdapter } from '../testing.js';
+import { createMockAdapter, resetPrivacyPolicy } from '../testing.js';
+
+afterEach(() => resetPrivacyPolicy());
 
 const personSchema: JSONSchema = {
   type: 'object',
@@ -156,7 +160,7 @@ describe('ExpoAI.generateObject (validate → repair)', () => {
     expect(obj).toEqual({ name: 'Ada', age: 36 });
     expect(respondWith).toHaveBeenCalledTimes(2);
     // The second (repair) prompt should reference the missing field.
-    expect(respondWith.mock.calls[1]?.[0]).toContain('age');
+    expect((respondWith.mock.calls[1] as unknown[] | undefined)?.[0]).toContain('age');
   });
 
   it('throws when output never satisfies the schema', async () => {
@@ -182,5 +186,123 @@ describe('ExpoAI.generateObject (validate → repair)', () => {
       maxRepairAttempts: 0,
     });
     expect(obj).toEqual({ name: 'Ada', age: 36 });
+  });
+});
+
+describe('structured output modes', () => {
+  beforeEach(() => clearAdapters());
+
+  const person = '{"name":"Ada","age":36}';
+
+  it("'emulated' never calls native generation", async () => {
+    registerAdapter(
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        objectText: 'NOT JSON',
+        respondWith: person,
+      }),
+    );
+    const { result } = await ExpoAI.generateObjectWithMeta({
+      prompt: 'extract',
+      schema: personSchema,
+      structuredOutput: 'emulated',
+    });
+    expect(result.structured).toEqual({ mode: 'emulated', attempts: 1, usedRepair: false });
+  });
+
+  it("'native' falls back to the next provider when one lacks native generation", async () => {
+    registerAdapter(
+      createMockAdapter({ provider: 'apple-foundation-models', respondWith: person }),
+    );
+    registerAdapter(
+      createMockAdapter({ provider: 'android-aicore-gemini-nano', objectText: person }),
+    );
+    const { result } = await ExpoAI.generateObjectWithMeta({
+      prompt: 'extract',
+      schema: personSchema,
+      structuredOutput: 'native',
+    });
+    expect(result.provider).toBe('android-aicore-gemini-nano');
+    expect(result.structured?.mode).toBe('native');
+  });
+
+  it("'native' rejects with UNSUPPORTED_SCHEMA when no provider has native generation", async () => {
+    registerAdapter(
+      createMockAdapter({ provider: 'apple-foundation-models', respondWith: person }),
+    );
+    await expect(
+      ExpoAI.generateObject({ prompt: 'x', schema: personSchema, structuredOutput: 'native' }),
+    ).rejects.toMatchObject({ code: 'UNSUPPORTED_SCHEMA' });
+  });
+
+  it("'auto' retries attempt 0 emulated when native throws UNSUPPORTED_SCHEMA", async () => {
+    const validated = await generateValidatedObject({
+      provider: 'apple-foundation-models',
+      schema: personSchema,
+      basePrompt: 'extract',
+      nativeObject: () =>
+        Promise.reject(
+          new ExpoAIError({ code: 'UNSUPPORTED_SCHEMA', provider: 'apple-foundation-models' }),
+        ),
+      generateText: async () => person,
+    });
+    expect(validated).toMatchObject({ mode: 'emulated', attempts: 1, usedRepair: false });
+  });
+
+  it("'native' propagates UNSUPPORTED_SCHEMA from native generation", async () => {
+    await expect(
+      generateValidatedObject({
+        provider: 'apple-foundation-models',
+        schema: personSchema,
+        basePrompt: 'extract',
+        mode: 'native',
+        nativeObject: () => Promise.reject({ code: 'UNSUPPORTED_SCHEMA' }),
+        generateText: async () => person,
+      }),
+    ).rejects.toMatchObject({ code: 'UNSUPPORTED_SCHEMA' });
+  });
+
+  it('sums usage across attempts; partial counts become unavailable', async () => {
+    const replies = [
+      { text: '{"name":"Ada"}', usage: { inputTokens: 3, outputTokens: 2, totalTokens: 5 } },
+      { text: person, usage: { inputTokens: 4, outputTokens: 1 } },
+    ];
+    const summed = await generateValidatedObject({
+      provider: 'cloud',
+      schema: personSchema,
+      basePrompt: 'extract',
+      generateText: async () => replies.shift()!,
+    });
+    // totalTokens is dropped: only one attempt reported it.
+    expect(summed.usage).toEqual({ inputTokens: 7, outputTokens: 3 });
+    expect(summed.usedRepair).toBe(true);
+
+    const texts = [{ text: '{"name":"Ada"}', usage: { inputTokens: 3 } }, person];
+    const partial = await generateValidatedObject({
+      provider: 'cloud',
+      schema: personSchema,
+      basePrompt: 'extract',
+      generateText: async () => texts.shift()!,
+    });
+    expect(partial.usage).toEqual({ source: 'unavailable' });
+  });
+
+  it('stamps usage on generateObjectWithMeta results', async () => {
+    registerAdapter(
+      createMockAdapter({
+        provider: 'apple-foundation-models',
+        respondWith: person,
+        usage: { inputTokens: 2, outputTokens: 3, source: 'estimated' },
+      }),
+    );
+    const { result } = await ExpoAI.generateObjectWithMeta({ prompt: 'x', schema: personSchema });
+    expect(result.usage).toEqual({ inputTokens: 2, outputTokens: 3, source: 'estimated' });
+
+    clearAdapters();
+    registerAdapter(
+      createMockAdapter({ provider: 'apple-foundation-models', respondWith: person }),
+    );
+    const bare = await ExpoAI.generateObjectWithMeta({ prompt: 'x', schema: personSchema });
+    expect(bare.result.usage).toEqual({ source: 'unavailable' });
   });
 });

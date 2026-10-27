@@ -26,7 +26,7 @@ export type LooseSchema = {
 export type GenerateOutput = {
   text: string;
   finishReason: 'stop';
-  usage: { inputTokens: number; outputTokens: number };
+  usage: { inputTokens?: number; outputTokens?: number; source?: 'provider' | 'estimated' };
 };
 
 export function mockGenerate(body: GenerateBody): GenerateOutput {
@@ -34,7 +34,11 @@ export function mockGenerate(body: GenerateBody): GenerateOutput {
   return {
     text,
     finishReason: 'stop',
-    usage: { inputTokens: estimateTokens(body.prompt), outputTokens: estimateTokens(text) },
+    usage: {
+      inputTokens: estimateTokens(body.prompt),
+      outputTokens: estimateTokens(text),
+      source: 'estimated',
+    },
   };
 }
 

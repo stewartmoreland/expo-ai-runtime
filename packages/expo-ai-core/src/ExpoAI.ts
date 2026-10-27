@@ -6,13 +6,21 @@
  * at import time); this namespace never talks to native modules directly.
  */
 
-import { getAvailability, getCapabilities, listProviders } from './capability-registry.js';
+import {
+  getAvailability,
+  getCapabilities,
+  listProviders,
+  onAvailabilityChange,
+} from './capability-registry.js';
+import { getPrivacyPolicy, setPrivacyPolicy } from './privacy.js';
 import {
   routeGenerate,
   routeGenerateObject,
+  routeGenerateObjectWithMeta,
   routeStream,
   routeStreamObject,
   routeTask,
+  selectAvailableAdapter,
 } from './provider-router.js';
 import { clearAdapters, registerAdapter, unregisterAdapter } from './registry.js';
 import { createSession } from './session-manager.js';
@@ -22,6 +30,7 @@ import type {
   GenerateObjectOptions,
   GenerateOptions,
   GenerateResult,
+  PrewarmOptions,
   ProofreadOptions,
   RewriteOptions,
   StreamObjectOptions,
@@ -36,6 +45,29 @@ export const ExpoAI = {
   getCapabilities,
   /** Every registered provider and its capabilities. */
   listProviders,
+  /** Subscribe to provider availability changes. */
+  onAvailabilityChange,
+
+  /** Set the app-wide privacy ceiling. Throws when the current policy is locked. */
+  setPrivacyPolicy,
+  /** The current app-wide privacy policy. */
+  getPrivacyPolicy,
+
+  /**
+   * Best-effort warm-up of the selected on-device provider (no fallback, so it
+   * never prewarms off-device implicitly). Never throws; resolves false when
+   * the provider is unavailable or cannot prewarm.
+   */
+  async prewarm(options: PrewarmOptions = {}): Promise<boolean> {
+    try {
+      const { adapter } = await selectAvailableAdapter(
+        options.provider ? { provider: options.provider } : {},
+      );
+      return (await adapter.prewarm?.(options)) ?? false;
+    } catch {
+      return false;
+    }
+  },
 
   /** One-shot text generation with optional fallback. */
   generate(options: GenerateOptions): Promise<GenerateResult> {
@@ -55,6 +87,14 @@ export const ExpoAI = {
   /** Generate an object validated against a JSON schema (with repair). */
   generateObject<T = unknown>(options: GenerateObjectOptions): Promise<T> {
     return routeGenerateObject<T>(options);
+  },
+
+  /** Like {@link ExpoAI.generateObject}, plus the result metadata (usage, structured). */
+  async generateObjectWithMeta<T = unknown>(
+    options: GenerateObjectOptions,
+  ): Promise<{ object: T; result: GenerateResult }> {
+    const { object, result } = await routeGenerateObjectWithMeta(options);
+    return { object: object as T, result };
   },
 
   /**

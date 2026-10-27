@@ -1,10 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
-import type { AdapterStreamHandlers } from '../adapter.js';
+import type { AdapterStreamHandlers, NormalizedGenerateRequest } from '../adapter.js';
+import { ExpoAIError } from '../errors.js';
 import {
   createNativeAdapter,
   createUnavailableNativeAdapter,
+  type NativeAvailability,
   type NativeCapabilityProfile,
+  type NativeGenerateResult,
   type NativeStreamEvent,
   type NativeStreamingModule,
 } from '../native-adapter.js';
@@ -28,14 +31,23 @@ const PROFILE: NativeCapabilityProfile = {
   contextWindow: 4096,
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type NativeFn = Mock<(...args: any[]) => Promise<NativeGenerateResult>>;
+
 class MockNative implements NativeStreamingModule {
   available = true;
   reasonUnavailable: string | undefined;
   throwOnAvailability = false;
   sessionDisposeThrows = false;
+  extraAvailability: Partial<NativeAvailability> = {};
   private listeners: Array<(event: NativeStreamEvent) => void> = [];
-  startStreaming = vi.fn(async () => {});
+  startStreaming = vi.fn(async (_requestId: string, _options: Record<string, unknown>) => {});
   cancelStreaming = vi.fn(async () => {});
+  cancel = vi.fn(async (_requestId: string) => {});
+  prewarm?: NativeStreamingModule['prewarm'];
+  generate: NativeFn = vi.fn(async () => ({ text: 'gen', finishReason: 'stop' }));
+  generateInSession: NativeFn = vi.fn(async () => ({ text: 'sgen' }));
+  generateObject: NativeFn = vi.fn(async () => ({ text: '{}' }));
 
   async getAvailability() {
     if (this.throwOnAvailability) throw new Error('probe failed');
@@ -44,16 +56,10 @@ class MockNative implements NativeStreamingModule {
       provider: 'x',
     };
     if (this.reasonUnavailable) availability.reasonUnavailable = this.reasonUnavailable;
-    return availability;
-  }
-  async generate() {
-    return { text: 'gen', finishReason: 'stop' };
+    return { ...availability, ...this.extraAvailability };
   }
   async createSession() {
     return { sessionId: 's1' };
-  }
-  async generateInSession() {
-    return { text: 'sgen' };
   }
   async resetSession() {}
   async disposeSession() {
@@ -134,7 +140,7 @@ describe('createNativeAdapter — streaming bridge', () => {
   function startStream() {
     const { handlers, events } = collectHandlers();
     adapter.stream!({ prompt: 'hi' }, handlers);
-    const requestId = native.startStreaming.mock.calls.at(-1)![0] as string;
+    const requestId = native.startStreaming.mock.lastCall![0] as string;
     return { events, requestId };
   }
 
@@ -170,7 +176,7 @@ describe('createNativeAdapter — streaming bridge', () => {
   it('stops emitting and removes the subscription after cancel', () => {
     const { handlers, events } = collectHandlers();
     const handle = adapter.stream!({ prompt: 'hi' }, handlers);
-    const requestId = native.startStreaming.mock.calls.at(-1)![0] as string;
+    const requestId = native.startStreaming.mock.lastCall![0] as string;
     native.emit({ requestId, type: 'start' });
     handle.cancel();
     native.emit({ requestId, type: 'token', text: 'late' });
@@ -201,5 +207,163 @@ describe('createNativeAdapter — sessions & unavailable', () => {
     expect((await adapter.getAvailability()).available).toBe(false);
     expect((await adapter.getCapabilities()).supportsStreaming).toBe(false);
     await expect(adapter.generate({ prompt: 'hi' })).rejects.toMatchObject({ code: 'UNAVAILABLE' });
+  });
+});
+
+describe('createNativeAdapter — request bridge', () => {
+  const PATHS = ['generate', 'session', 'object'] as const;
+  type Path = (typeof PATHS)[number];
+
+  const nativeFn = (native: MockNative, path: Path): NativeFn =>
+    path === 'generate'
+      ? native.generate
+      : path === 'object'
+        ? native.generateObject
+        : native.generateInSession;
+
+  /** The options dictionary (always the last argument) of the latest native call. */
+  function lastOptions(native: MockNative, path: Path): Record<string, unknown> {
+    const args = nativeFn(native, path).mock.lastCall!;
+    return args[args.length - 1] as Record<string, unknown>;
+  }
+
+  async function call(native: MockNative, path: Path, req: NormalizedGenerateRequest) {
+    const adapter = createNativeAdapter(native, { provider: PROVIDER, capabilityProfile: PROFILE });
+    if (path === 'generate') return adapter.generate(req);
+    if (path === 'object') {
+      return adapter.generateObject!({ ...req, schema: { type: 'object' }, schemaName: 'S' });
+    }
+    return (await adapter.createSession!({})).generate(req);
+  }
+
+  it.each(PATHS)('%s: abort calls cancel(requestId) with the id sent to native', async (path) => {
+    const native = new MockNative();
+    let resolve!: (result: NativeGenerateResult) => void;
+    nativeFn(native, path).mockImplementationOnce(() => new Promise((r) => (resolve = r)));
+    const controller = new AbortController();
+    const pending = call(native, path, {
+      prompt: 'hi',
+      reasoningLevel: 'deep',
+      signal: controller.signal,
+    });
+    await vi.waitFor(() => expect(nativeFn(native, path)).toHaveBeenCalled());
+
+    const options = lastOptions(native, path);
+    expect(options).toMatchObject({ prompt: 'hi', reasoningLevel: 'deep' });
+    expect(typeof options.requestId).toBe('string');
+    controller.abort();
+    expect(native.cancel).toHaveBeenCalledWith(options.requestId);
+    resolve({ text: 'late' });
+    await pending;
+  });
+
+  it.each(PATHS)('%s: an already-aborted signal skips the native call', async (path) => {
+    const native = new MockNative();
+    await expect(
+      call(native, path, { prompt: 'hi', signal: AbortSignal.abort() }),
+    ).rejects.toMatchObject({ code: 'CANCELLED' });
+    expect(nativeFn(native, path)).not.toHaveBeenCalled();
+  });
+
+  it.each(PATHS)('%s: an error-as-value result throws a typed ExpoAIError', async (path) => {
+    const native = new MockNative();
+    nativeFn(native, path).mockResolvedValueOnce({
+      text: '',
+      error: { code: 'REFUSAL', message: 'no', detail: 'policy' },
+    });
+    const error = await call(native, path, { prompt: 'hi' }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ExpoAIError);
+    expect(error).toMatchObject({
+      code: 'REFUSAL',
+      provider: PROVIDER,
+      detail: 'policy',
+      fallbackRecommended: false,
+    });
+  });
+
+  it('generateObject sends the schema as JSON and is omitted without native support', async () => {
+    const native = new MockNative();
+    await call(native, 'object', { prompt: 'hi' });
+    expect(lastOptions(native, 'object')).toMatchObject({
+      schemaJson: '{"type":"object"}',
+      schemaName: 'S',
+    });
+
+    const bare = new MockNative() as Partial<MockNative>;
+    delete bare.generateObject;
+    const adapter = createNativeAdapter(bare as NativeStreamingModule, {
+      provider: PROVIDER,
+      capabilityProfile: PROFILE,
+    });
+    expect(adapter.generateObject).toBeUndefined();
+  });
+
+  it('copies usage counts and keeps only a known source', async () => {
+    const native = new MockNative();
+    const counts = {
+      inputTokens: 3,
+      outputTokens: 4,
+      totalTokens: 7,
+      cachedInputTokens: 1,
+      reasoningTokens: 2,
+    };
+    native.generate.mockResolvedValueOnce({ text: 'x', usage: { ...counts, source: 'bogus' } });
+    native.generate.mockResolvedValueOnce({ text: 'x', usage: { ...counts, source: 'estimated' } });
+    expect((await call(native, 'generate', { prompt: 'hi' }))!.usage).toEqual(counts);
+    expect((await call(native, 'generate', { prompt: 'hi' }))!.usage).toEqual({
+      ...counts,
+      source: 'estimated',
+    });
+  });
+
+  it('stream done carries usage, and a done error-as-value becomes onError', () => {
+    const native = new MockNative();
+    const adapter = createNativeAdapter(native, { provider: PROVIDER, capabilityProfile: PROFILE });
+
+    const ok = collectHandlers();
+    adapter.stream!({ prompt: 'hi' }, ok.handlers);
+    let requestId = native.startStreaming.mock.lastCall![0] as string;
+    native.emit({ requestId, type: 'done', result: { text: 'ok', usage: { outputTokens: 2 } } });
+    expect(ok.events.find((e) => e[0] === 'done')![1]).toMatchObject({
+      usage: { outputTokens: 2 },
+    });
+
+    const bad = collectHandlers();
+    adapter.stream!({ prompt: 'hi' }, bad.handlers);
+    requestId = native.startStreaming.mock.lastCall![0] as string;
+    native.emit({ requestId, type: 'done', result: { text: '', error: { code: 'REFUSAL' } } });
+    expect(bad.events.find((e) => e[0] === 'error')![1]).toMatchObject({ code: 'REFUSAL' });
+    expect(native.listenerCount).toBe(0);
+  });
+});
+
+describe('createNativeAdapter — availability passthrough & prewarm', () => {
+  it('passes contextWindow and supportedLanguages through', async () => {
+    const native = new MockNative();
+    native.extraAvailability = { contextWindow: 8192, supportedLanguages: ['en-US', 'fr-FR'] };
+    const adapter = createNativeAdapter(native, { provider: PROVIDER, capabilityProfile: PROFILE });
+    expect((await adapter.getCapabilities()).contextWindow).toBe(8192);
+    expect((await adapter.getAvailability()).supportedLanguages).toEqual(['en-US', 'fr-FR']);
+  });
+
+  it('prewarm is absent / false when the native method is missing', async () => {
+    const native = new MockNative();
+    const adapter = createNativeAdapter(native, { provider: PROVIDER, capabilityProfile: PROFILE });
+    expect(adapter.prewarm).toBeUndefined();
+    expect(await (await adapter.createSession!({})).prewarm!({ promptPrefix: 'p' })).toBe(false);
+  });
+
+  it('prewarm forwards options and resolves false when native rejects', async () => {
+    const native = new MockNative();
+    native.prewarm = vi.fn(async () => true);
+    let adapter = createNativeAdapter(native, { provider: PROVIDER, capabilityProfile: PROFILE });
+    expect(await adapter.prewarm!({ instructions: 'i' })).toBe(true);
+    expect(native.prewarm).toHaveBeenCalledWith({ instructions: 'i' });
+
+    native.prewarm = vi.fn(async () => {
+      throw new Error('boom');
+    });
+    adapter = createNativeAdapter(native, { provider: PROVIDER, capabilityProfile: PROFILE });
+    expect(await adapter.prewarm!({})).toBe(false);
   });
 });

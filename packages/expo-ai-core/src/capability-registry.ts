@@ -5,29 +5,20 @@
  * gate features at runtime before showing them.
  */
 
-import { getAdapter, getAdapters, getRegisteredProviders } from './registry.js';
-import {
-  defaultProviderPriority,
-  type ExpoAIAvailability,
-  type ExpoAICapabilities,
-  type ExpoAIProvider,
-  type ExpoAIProviderInfo,
-  type ExpoAIUnavailableReason,
+import { isProviderAllowed } from './privacy.js';
+import { getAdapter, getAdapters, getOrderedProviders } from './registry.js';
+import type {
+  ExpoAIAvailability,
+  ExpoAICapabilities,
+  ExpoAIProvider,
+  ExpoAIProviderInfo,
+  ExpoAISubscription,
+  ExpoAIUnavailableReason,
 } from './types.js';
 
-/** Registered providers, default-priority first, then any extras. */
-function orderedRegisteredProviders(): ExpoAIProvider[] {
-  const registered = new Set(getRegisteredProviders());
-  const ordered: ExpoAIProvider[] = [];
-  for (const provider of defaultProviderPriority) {
-    if (registered.has(provider)) {
-      ordered.push(provider);
-      registered.delete(provider);
-    }
-  }
-  // Any registered provider not in the default priority (e.g. a custom one).
-  for (const provider of registered) ordered.push(provider);
-  return ordered;
+/** Registered providers the privacy policy permits, in routing order. */
+function allowedProviders(): ExpoAIProvider[] {
+  return getOrderedProviders().filter((provider) => isProviderAllowed(provider));
 }
 
 export function unavailableCapabilities(
@@ -58,7 +49,7 @@ export function unavailableCapabilities(
 
 /** Availability of the best (highest-priority) currently-available provider. */
 export async function getAvailability(): Promise<ExpoAIAvailability> {
-  const providers = orderedRegisteredProviders();
+  const providers = allowedProviders();
   if (providers.length === 0) {
     return { available: false, provider: 'none', reasonUnavailable: 'provider_not_configured' };
   }
@@ -76,7 +67,7 @@ export async function getAvailability(): Promise<ExpoAIAvailability> {
 
 /** Capabilities of the best currently-available provider. */
 export async function getCapabilities(): Promise<ExpoAICapabilities> {
-  const providers = orderedRegisteredProviders();
+  const providers = allowedProviders();
   if (providers.length === 0) {
     return unavailableCapabilities('none', 'provider_not_configured');
   }
@@ -92,7 +83,39 @@ export async function getCapabilities(): Promise<ExpoAICapabilities> {
   return firstUnavailable ?? unavailableCapabilities('none', 'unknown');
 }
 
-/** Every registered provider and its current capabilities. */
+const availabilityListeners = new Set<(availability: ExpoAIAvailability) => void>();
+
+/** Subscribe to provider availability changes (see {@link notifyAvailabilityChange}). */
+export function onAvailabilityChange(
+  callback: (availability: ExpoAIAvailability) => void,
+): ExpoAISubscription {
+  availabilityListeners.add(callback);
+  return { remove: () => void availabilityListeners.delete(callback) };
+}
+
+/**
+ * Re-probe `provider` and fan its availability out to subscribers. Provider
+ * packages call this on app foreground or after a model download. No-op when
+ * nothing is subscribed; listener and probe errors are swallowed.
+ */
+export function notifyAvailabilityChange(provider: ExpoAIProvider): void {
+  const adapter = getAdapter(provider);
+  if (!adapter || availabilityListeners.size === 0) return;
+  adapter.getAvailability().then(
+    (availability) => {
+      for (const listener of availabilityListeners) {
+        try {
+          listener(availability);
+        } catch {
+          // A broken listener must not stop the others.
+        }
+      }
+    },
+    () => undefined,
+  );
+}
+
+/** Every registered provider and its current capabilities (not policy-filtered). */
 export async function listProviders(): Promise<ExpoAIProviderInfo[]> {
   return Promise.all(
     getAdapters().map(async (adapter) => ({
