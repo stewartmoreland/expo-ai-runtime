@@ -119,6 +119,17 @@ body {
   backdrop-filter: saturate(140%) blur(8px);
 }
 
+/* backdrop-filter makes the navbar the containing block for its fixed children,
+   which clips the mobile drawer (.navbar-sidebar) to the navbar's height. Drop it
+   while the drawer is open, and give the drawer a solid background since the
+   translucent navbar color no longer has the blur behind it. */
+.navbar.navbar-sidebar--show {
+  backdrop-filter: none;
+}
+.navbar-sidebar {
+  background-color: var(--eai-bg);
+}
+
 /* Sidebar active item: accent-tinted pill. */
 .menu__link--active:not(.menu__link--sublist) {
   background: rgba(110, 168, 254, 0.1);
