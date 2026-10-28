@@ -5,8 +5,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-const ATTEMPTS = Number(process.env.VERIFY_ATTEMPTS ?? 12);
-const DELAY_MS = 10_000; // registry/CDN propagation
+const ATTEMPTS = Number(process.env.VERIFY_ATTEMPTS ?? 36);
+const DELAY_MS = 10_000; // registry/CDN propagation; v0.8.0 took >2 min for one package
 
 const pkgs = readdirSync('packages')
   .map((d) => JSON.parse(readFileSync(`packages/${d}/package.json`, 'utf8')))
