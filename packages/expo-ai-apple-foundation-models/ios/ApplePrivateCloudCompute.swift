@@ -29,7 +29,9 @@ enum ApplePrivateCloudCompute {
       @unknown default: return unavailable("unknown")
       }
     }
-    if model.quotaUsage.isLimitReached { return unavailable("quota_exhausted") }
+    if model.quotaUsage.isLimitReached {
+      return unavailable("quota_exhausted")
+    }
     var result: [String: Any] = ["available": true, "provider": provider]
     // `try await`: async throws in the 27.1 SDK, sync in 27.0 (only warns there).
     if await (try? model.supportsLocale()) == false {
@@ -38,7 +40,9 @@ enum ApplePrivateCloudCompute {
     if let languages = try? await model.supportedLanguages {
       result["supportedLanguages"] = languages.map(\.minimalIdentifier).sorted()
     }
-    if let size = try? await model.contextSize { result["contextWindow"] = size }
+    if let size = try? await model.contextSize {
+      result["contextWindow"] = size
+    }
     return result
     #else
     return unavailable("missing_dependency")
@@ -50,7 +54,9 @@ enum ApplePrivateCloudCompute {
     guard isConfigured, #available(iOS 27.0, macOS 27.0, *) else { return nil }
     let usage = PrivateCloudComputeLanguageModel().quotaUsage
     var isApproachingLimit = false
-    if case .belowLimit(let below) = usage.status { isApproachingLimit = below.isApproachingLimit }
+    if case .belowLimit(let below) = usage.status {
+      isApproachingLimit = below.isApproachingLimit
+    }
     return [
       "status": usage.isLimitReached ? "limit_reached" : "below_limit",
       "isApproachingLimit": isApproachingLimit,

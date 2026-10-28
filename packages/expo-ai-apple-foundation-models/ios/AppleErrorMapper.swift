@@ -17,14 +17,18 @@ enum AppleErrorMapper {
       "message": error.localizedDescription,
       "nativeMessage": error.localizedDescription,
     ]
-    if let detail { payload["detail"] = detail }
+    if let detail {
+      payload["detail"] = detail
+    }
     return payload
   }
 
   /// iOS 27 types first, then the iOS 26 `GenerationError`: which family iOS 27
   /// actually throws at runtime is unknown, so both are handled.
   private static func classify(_ error: Error) async -> (String, String?) {
-    if error is CancellationError { return ("CANCELLED", nil) }
+    if error is CancellationError {
+      return ("CANCELLED", nil)
+    }
     if let error = error as? ExpoAIAppleError {
       switch error {
       case .unsupportedOS: return ("UNSUPPORTED_DEVICE", nil)
@@ -34,9 +38,13 @@ enum AppleErrorMapper {
     }
     #if canImport(FoundationModels)
     #if canImport(FoundationModels, _version: 2.0)
-    if #available(iOS 27.0, macOS 27.0, *), let mapped = await classify27(error) { return mapped }
+    if #available(iOS 27.0, macOS 27.0, *), let mapped = await classify27(error) {
+      return mapped
+    }
     #endif
-    if #available(iOS 26.0, macOS 26.0, *), let mapped = await classify26(error) { return mapped }
+    if #available(iOS 26.0, macOS 26.0, *), let mapped = await classify26(error) {
+      return mapped
+    }
     #endif
     // UNVERIFIED: confirm on device — ENTITLEMENT_MISSING and BACKGROUND_NOT_ALLOWED
     // have no native error; record what a background / unentitled call throws.
@@ -47,8 +55,12 @@ enum AppleErrorMapper {
   @available(iOS 26.0, macOS 26.0, *)
   // swiftlint:disable:next cyclomatic_complexity
   private static func classify26(_ error: Error) async -> (String, String?)? {
-    if error is GenerationSchema.SchemaError { return ("UNSUPPORTED_SCHEMA", nil) }
-    if error is LanguageModelSession.ToolCallError { return ("TOOL_ERROR", nil) }
+    if error is GenerationSchema.SchemaError {
+      return ("UNSUPPORTED_SCHEMA", nil)
+    }
+    if error is LanguageModelSession.ToolCallError {
+      return ("TOOL_ERROR", nil)
+    }
     guard let error = error as? LanguageModelSession.GenerationError else { return nil }
     switch error {
     case .exceededContextWindowSize: return ("CONTEXT_WINDOW_EXCEEDED", nil)
@@ -77,9 +89,15 @@ enum AppleErrorMapper {
       @unknown default: return ("NATIVE_PROVIDER_ERROR", nil)
       }
     }
-    if error is LanguageModelSession.Error { return ("CONCURRENT_REQUEST", nil) }
-    if error is SystemLanguageModel.Error { return ("MODEL_NOT_READY", nil) }
-    if error is GeneratedContent.ParsingError { return ("NATIVE_PROVIDER_ERROR", nil) }
+    if error is LanguageModelSession.Error {
+      return ("CONCURRENT_REQUEST", nil)
+    }
+    if error is SystemLanguageModel.Error {
+      return ("MODEL_NOT_READY", nil)
+    }
+    if error is GeneratedContent.ParsingError {
+      return ("NATIVE_PROVIDER_ERROR", nil)
+    }
     guard let error = error as? LanguageModelError else { return nil }
     switch error {
     case .contextSizeExceeded(let context):

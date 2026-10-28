@@ -66,13 +66,21 @@ enum AppleSchema {
       return DynamicGenerationSchema(type: String.self)
     case "integer":
       var guides: [GenerationGuide<Int>] = []
-      if let min = schema["minimum"] as? Int { guides.append(.minimum(min)) }
-      if let max = schema["maximum"] as? Int { guides.append(.maximum(max)) }
+      if let min = schema["minimum"] as? Int {
+        guides.append(.minimum(min))
+      }
+      if let max = schema["maximum"] as? Int {
+        guides.append(.maximum(max))
+      }
       return DynamicGenerationSchema(type: Int.self, guides: guides)
     case "number":
       var guides: [GenerationGuide<Double>] = []
-      if let min = schema["minimum"] as? Double { guides.append(.minimum(min)) }
-      if let max = schema["maximum"] as? Double { guides.append(.maximum(max)) }
+      if let min = schema["minimum"] as? Double {
+        guides.append(.minimum(min))
+      }
+      if let max = schema["maximum"] as? Double {
+        guides.append(.maximum(max))
+      }
       return DynamicGenerationSchema(type: Double.self, guides: guides)
     case "boolean":
       return DynamicGenerationSchema(type: Bool.self)
