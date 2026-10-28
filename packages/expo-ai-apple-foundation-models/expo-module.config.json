@@ -1,6 +1,7 @@
 {
   "platforms": ["apple"],
   "apple": {
-    "modules": ["ExpoAIAppleModule"]
+    "modules": ["ExpoAIAppleModule"],
+    "podspecPath": "ExpoAIApple.podspec"
   }
 }
