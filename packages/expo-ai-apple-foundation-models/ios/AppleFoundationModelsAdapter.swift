@@ -155,8 +155,9 @@ enum AppleFoundationModelsAdapter {
   /// UNVERIFIED: confirm on device (iOS). If not, JS discards the result and the native work runs on.
   private static func tracked<T>(_ requestId: String?, _ work: @escaping () async throws -> T) async throws -> T {
     let task = Task { try await work() }
-    if let requestId { AppleTaskRegistry.shared.register(requestId) { task.cancel() } }
-    defer { if let requestId { AppleTaskRegistry.shared.remove(requestId) } }
+    guard let requestId else { return try await task.value }
+    AppleTaskRegistry.shared.register(requestId) { task.cancel() }
+    defer { AppleTaskRegistry.shared.remove(requestId) }
     return try await task.value
   }
 }
@@ -211,13 +212,17 @@ extension AppleFoundationModelsAdapter {
         }
       }
       #if canImport(FoundationModels, _version: 2.0)
-      if #available(iOS 27.0, macOS 27.0, *) { usage = usagePayload(partial.usage) }
+      if #available(iOS 27.0, macOS 27.0, *) {
+        usage = usagePayload(partial.usage)
+      }
       #endif
     }
     try Task.checkCancellation()
 
     var result: [String: Any] = ["text": last, "finishReason": "stop"]
-    if let usage { result["usage"] = usage }
+    if let usage {
+      result["usage"] = usage
+    }
     emit(["requestId": requestId, "type": "done", "result": result])
   }
 

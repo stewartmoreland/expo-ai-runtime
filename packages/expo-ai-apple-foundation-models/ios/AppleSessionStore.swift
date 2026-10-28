@@ -65,9 +65,13 @@ final class AppleTaskRegistry {
   func register(_ id: String, cancel: @escaping () -> Void) {
     lock.lock()
     let early = cancelledEarly.remove(id) != nil
-    if !early { cancellers[id] = cancel }
+    if !early {
+      cancellers[id] = cancel
+    }
     lock.unlock()
-    if early { cancel() }
+    if early {
+      cancel()
+    }
   }
 
   func remove(_ id: String) {
@@ -79,7 +83,9 @@ final class AppleTaskRegistry {
   func cancel(_ id: String) {
     lock.lock()
     let canceller = cancellers.removeValue(forKey: id)
-    if canceller == nil { cancelledEarly.insert(id) }
+    if canceller == nil {
+      cancelledEarly.insert(id)
+    }
     lock.unlock()
     canceller?()
   }
