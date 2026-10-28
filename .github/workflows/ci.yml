@@ -99,7 +99,8 @@ jobs:
         # Release only when there are user-facing changes (feat/fix/perf or a
         # breaking change) since the last v* tag. chore/ci/docs/build/style/test/
         # refactor commits don't cut a new npm version. release-it computes the
-        # actual bump (fix->patch, feat->minor, !/BREAKING->major) when it runs.
+        # actual bump (fix->patch, feat->minor, !/BREAKING->major; preMajor in
+        # .release-it.json makes breaking a minor bump while on 0.x) when it runs.
         run: |
           LAST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "")
           if [ -n "$LAST_TAG" ]; then RANGE="${LAST_TAG}..HEAD"; else RANGE="HEAD"; fi
