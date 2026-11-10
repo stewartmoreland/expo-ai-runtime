@@ -25,8 +25,9 @@ if (caps.available) {
 }
 ```
 
-Every result carries **`provider`** and **`privacy`** metadata, so the app always knows
-which engine answered and whether the prompt left the device. See the
+Every result carries **`provider`**, **`privacy`**, and **`usage`** metadata, so the app
+always knows which engine answered, whether the prompt left the device, and (when the
+provider reports them) how many tokens it used. See the
 [privacy model](../concepts/privacy.md) for what the modes mean.
 
 Requests stay on-device by default. `fallback: 'cloud'` allows the router to go

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import Badge from '@site/src/components/Badge';
+import Badge, { type BadgeTone } from '@site/src/components/Badge';
 import styles from './styles.module.css';
 
 // What works on which engine. Encodes the capability profiles the adapters
@@ -15,6 +15,8 @@ type ProviderColumn = {
   label: string;
   meta: string;
   onDevice: boolean;
+  /** Badge tone override (defaults: on-device ok, off-device warn). */
+  tone?: BadgeTone;
   supports: Record<string, boolean>;
 };
 
@@ -47,6 +49,21 @@ const PROVIDERS: ProviderColumn[] = [
     label: 'Gemini Nano',
     meta: 'Android · AICore',
     onDevice: true,
+    supports: {
+      text: true,
+      streaming: true,
+      sessions: true,
+      structured: true,
+      streamObject: true,
+      tasks: true,
+    },
+  },
+  {
+    provider: 'apple-private-cloud-compute',
+    label: 'Private Cloud Compute',
+    meta: 'iOS 27+ · opt-in',
+    onDevice: false,
+    tone: 'info',
     supports: {
       text: true,
       streaming: true,
@@ -100,7 +117,7 @@ export default function CapabilityMatrix(): ReactNode {
               <th key={p.provider} className={styles.provHead}>
                 <span className={styles.provLabel}>{p.label}</span>
                 <span className={styles.provMeta}>{p.meta}</span>
-                <Badge tone={p.onDevice ? 'ok' : 'warn'}>
+                <Badge tone={p.tone ?? (p.onDevice ? 'ok' : 'warn')}>
                   {p.onDevice ? 'on-device' : 'off-device'}
                 </Badge>
               </th>

@@ -30,6 +30,22 @@ import { downloadGeminiNanoModel } from '@stewmore/expo-ai-android-aicore';
 await downloadGeminiNanoModel();
 ```
 
+## Config plugin
+
+The native module autolinks on its own, but add the config plugin so `expo prebuild`
+also raises the project's `minSdkVersion` to the AICore floor (26):
+
+```json title="app.json"
+{
+  "expo": {
+    "plugins": [["@stewmore/expo-ai-android-aicore", { "minSdkVersion": 31 }]]
+  }
+}
+```
+
+- `minSdkVersion` — optional; defaults to `26`. Set it if your app already targets a
+  higher API.
+
 ## Requirements
 
 - A device with **AICore / Gemini Nano** (e.g. recent Pixel and Galaxy flagships),
@@ -41,12 +57,19 @@ AICore is system-managed and may still be initializing — the adapter surfaces
 `model_initializing` / `aicore_unavailable` (retryable) so the runtime can fall back per
 the app's policy.
 
+Availability is re-probed when the app returns to the foreground and after
+`downloadGeminiNanoModel()` resolves, so
+[`ExpoAI.onAvailabilityChange`](../concepts/capabilities.mdx#reacting-to-changes) (and
+`useCapabilities`) see the model become ready without polling.
+
 ## What it maps
 
 | Runtime              | ML Kit GenAI                                                                  |
 | -------------------- | ----------------------------------------------------------------------------- |
 | `generate`           | Prompt API `GenerativeModel.generateContent`                                  |
 | `stream`             | `generateContentStream` (`Flow`) → token deltas                               |
+| `signal` (abort)     | cancels the streaming coroutine (`cancelStreaming`)                           |
+| `usage`              | not reported by the Prompt API → `source: 'unavailable'`                      |
 | capability detection | `checkStatus()` → `FeatureStatus`                                             |
 | model download       | `download()` (`downloadGeminiNanoModel`)                                      |
 | sessions             | emulated (transcript replayed as prompt prefix — the Prompt API is stateless) |

@@ -76,6 +76,9 @@ export {
   type GenerateValidatedObjectOptions,
 } from './structured-output.js';
 
+// Skills (SKILL.md parsing, linting, manifest bundling).
+export { parseSkill, lintSkill, buildSkillManifest, type SkillLintResult } from './skills.js';
+
 // Shared native-adapter factory (used by the Apple/Android provider packages).
 export {
   createNativeAdapter,

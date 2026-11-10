@@ -20,11 +20,19 @@ import { ExpoAIError } from './errors.js';
 import { isProviderAllowed } from './privacy.js';
 import { finalizeObjectResult, finalizeResult } from './result.js';
 import { selectAvailableAdapter } from './provider-router.js';
+import {
+  generateActivating,
+  planSkills,
+  skillLoadedPrompt,
+  streamActivating,
+  type SkillActivation,
+} from './skills.js';
 import { createStreamIterable, type StreamSource } from './stream-bridge.js';
 import { generateValidatedObject } from './structured-output.js';
 import type {
   CreateSessionOptions,
   ExpoAIProvider,
+  ExpoAISkill,
   ExpoAISession,
   GenerateResult,
   SessionGenerateObjectOptions,
@@ -153,7 +161,15 @@ function toExpoAISession(
   session: AdapterSession,
   fallbackAdapter?: ExpoAIAdapter,
   sessionOptions?: CreateSessionOptions,
+  skills: string[] = [],
+  activation?: SkillActivation,
 ): ExpoAISession {
+  /** One user turn; with emulated activation, the activation exchange stays in the transcript. */
+  function generateTurn(req: NormalizedGenerateRequest): Promise<AdapterGenerateResult> {
+    const generate = (r: NormalizedGenerateRequest) => session.generate(r);
+    return activation ? generateActivating(req, activation, generate) : generate(req);
+  }
+
   function reqFrom(options: SessionGenerateOptions): NormalizedGenerateRequest {
     const req: NormalizedGenerateRequest = { prompt: options.prompt };
     // Per-call values win; otherwise fall back to the session-level defaults.
@@ -188,14 +204,22 @@ function toExpoAISession(
     // pollutes the transcript: the session's own ephemeral generate (keeps
     // context), else a one-shot via the underlying adapter (no context, but no
     // pollution). Only the last resort — session.generate — commits.
+    // A one-shot still carries the session instructions (and so its skills).
+    const instructions = sessionOptions?.instructions;
+    const oneShot = <R extends NormalizedGenerateRequest>(req: R): R =>
+      instructions !== undefined ? { ...req, instructions } : req;
     const ephemeral =
       session.generateEphemeral?.bind(session) ??
-      (fallbackAdapter ? fallbackAdapter.generate.bind(fallbackAdapter) : undefined);
+      (fallbackAdapter
+        ? (req: NormalizedGenerateRequest) => fallbackAdapter.generate(oneShot(req))
+        : undefined);
     const nonCommitting = Boolean(ephemeral);
     // Native guided generation never commits: the session's own, else a one-shot.
     const generateObject =
       session.generateObject?.bind(session) ??
-      fallbackAdapter?.generateObject?.bind(fallbackAdapter);
+      (fallbackAdapter?.generateObject
+        ? (req: NormalizedObjectRequest) => fallbackAdapter.generateObject!(oneShot(req))
+        : undefined);
 
     const validated = await generateValidatedObject({
       provider: session.provider,
@@ -228,7 +252,7 @@ function toExpoAISession(
     if (nonCommitting) session.commitTurn?.(options.prompt, validated.raw);
     return {
       object: validated.object as T,
-      result: finalizeObjectResult(validated, session.provider, false),
+      result: finalizeObjectResult(validated, session.provider, false, skills),
     };
   }
 
@@ -238,18 +262,25 @@ function toExpoAISession(
 
     async generate(options) {
       guard();
-      const result = await session.generate(reqFrom(options));
-      return finalizeResult(result, session.provider, false);
+      const result = await generateTurn(reqFrom(options));
+      return finalizeResult(result, session.provider, false, skills);
     },
 
     stream(options) {
       const req = reqFrom(options);
+      const stream = session.stream?.bind(session);
       const source: StreamSource = {
         provider: session.provider,
         usedFallback: false,
+        skills,
         signal: req.signal,
-        startNativeStream: session.stream ? (handlers) => session.stream!(req, handlers) : null,
-        generateOnce: () => session.generate(req),
+        startNativeStream: stream
+          ? (handlers) =>
+              activation
+                ? streamActivating(req, activation, stream, handlers)
+                : stream(req, handlers)
+          : null,
+        generateOnce: () => generateTurn(req),
       };
       // Guard lazily so the policy error surfaces from the iterable, like every other error.
       return {
@@ -277,11 +308,33 @@ function toExpoAISession(
 }
 
 export async function createSession(options: CreateSessionOptions = {}): Promise<ExpoAISession> {
-  const { adapter } = await selectAvailableAdapter(options);
+  const { adapter, provider } = await selectAvailableAdapter(options);
+
+  // Skills are planned once, against the bound provider. Only a native session
+  // of an `activatesSkills` adapter activates them itself.
+  const { skills, ...rest } = options;
+  const native = adapter.activatesSkills === true && adapter.createSession !== undefined;
+  const plan = planSkills(options.instructions, skills, provider, native);
+  const composed: CreateSessionOptions = rest;
+  const instructions = plan.instructions();
+  if (instructions !== undefined) composed.instructions = instructions;
+  const offered = plan.offered.length > 0 ? plan.offered : undefined;
 
   const adapterSession = adapter.createSession
-    ? await adapter.createSession(options)
-    : new EmulatedSession(adapter, options);
+    ? await adapter.createSession(native && offered ? { ...composed, skills: offered } : composed)
+    : new EmulatedSession(adapter, composed);
 
-  return toExpoAISession(adapterSession, adapter, options);
+  // Emulated activation answers in the transcript: the next turn carries the skill body.
+  const activation: SkillActivation | undefined =
+    !native && offered
+      ? {
+          offered,
+          next: (first, activated) => ({
+            ...first,
+            prompt: skillLoadedPrompt(activated[activated.length - 1] as ExpoAISkill),
+          }),
+        }
+      : undefined;
+
+  return toExpoAISession(adapterSession, adapter, composed, plan.applied, activation);
 }

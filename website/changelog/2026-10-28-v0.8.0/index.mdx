@@ -1,0 +1,92 @@
+---
+slug: v0.8.0
+title: v0.8.0 — privacy policy, Private Cloud Compute, and usage on every result
+authors: [stewmore]
+tags: [release, core, native, react, evals]
+---
+
+Version 0.8.0 adds an app-wide privacy policy and Apple Private Cloud Compute. Every
+result now includes token usage. Off-device routing changes so that the runtime never
+sends a request off the device unless you allow it. This release has **breaking
+changes**. Read the [upgrade notes](/changelog/v0.8.0#breaking-changes) before you update.
+
+{/* truncate */}
+
+## Breaking changes
+
+- **Cloud is no longer in the default provider priority.** The runtime routes to `cloud`
+  only when you set `provider: 'cloud'` or a `fallback` other than `'none'`. See
+  [providers and routing](/docs/concepts/providers#default-priority).
+- **Sessions honor `sensitive`.** A sensitive session binds to a third-party cloud only
+  with `fallback: 'cloud'` or an explicit `provider: 'cloud'`. See
+  [sessions](/docs/concepts/sessions).
+- **`GenerateResult.usage` is required** and has a `source` field (`'provider'`,
+  `'estimated'`, or `'unavailable'`). The runtime never sets a missing count to zero. See
+  [token usage](/docs/concepts/providers#token-usage).
+- **New `ExpoAIError` codes and a `detail` field.** If your code uses an exhaustive
+  `switch` on `code`, add cases for the new codes. See the
+  [error model](/docs/concepts/errors).
+- **Apple:** results report provider usage, and the native module contract changed.
+  Rebuild your development build after you update.
+- **React:** the return value of `useObject` now includes `result`. See
+  [`useObject`](/docs/packages/react#useobject).
+- **Evals:** `@stewmore/expo-ai-cloud` is now an optional peer dependency of the evals
+  package, and the default fallback is `'none'`. See [evals](/docs/packages/evals).
+
+## New features
+
+### Core
+
+- **App-wide privacy policy.** `ExpoAI.setPrivacyPolicy` sets a hard limit on the privacy
+  modes and providers that the app can use, including explicit providers. The policy
+  also has a `sensitiveByDefault` option. See
+  [app-wide privacy policy](/docs/concepts/privacy#app-wide-privacy-policy).
+- **Private Cloud Compute gating.** The router treats Apple Private Cloud Compute as an
+  off-device provider. Sensitive prompts can still use it.
+- **Token usage on every result.** See [token usage](/docs/concepts/providers#token-usage).
+- **Structured output modes.** `structuredOutput` selects how the first attempt is
+  generated. See [choosing a strategy](/docs/concepts/structured-output#choosing-a-strategy).
+- **`ExpoAI.prewarm`** and `session.prewarm()` warm up a provider before the first
+  request. See [prewarm](/docs/concepts/providers#prewarm).
+- **Availability events.** `ExpoAI.onAvailabilityChange` tells you when a model becomes
+  ready or the user enables Apple Intelligence. See
+  [reacting to changes](/docs/concepts/capabilities#reacting-to-changes).
+- **Native cancellation.** An `AbortSignal` now cancels the native task, not only the
+  JavaScript wrapper.
+
+### Apple Foundation Models
+
+- Provider-reported usage on iOS 27 and later, and the real context size when the app is
+  built with the iOS 27 SDK. See [token counting](/docs/packages/apple-foundation-models#token-counting).
+- Native guided generation for structured output, cancellation, prewarm, and locale
+  support.
+- A new **Apple Private Cloud Compute** adapter and a `privateCloudCompute` config plugin
+  option. See [Private Cloud Compute](/docs/packages/apple-foundation-models#private-cloud-compute).
+
+### Android AICore
+
+- Availability change notifications when the app returns to the foreground and after a
+  model download.
+
+### React
+
+- `useObject` returns the `GenerateResult` as `result`.
+- `useCapabilities` refreshes when availability changes. See
+  [`useCapabilities`](/docs/packages/react#usecapabilities).
+
+### Evals
+
+- New `--providers` and `--fallback` flags. Cloud is optional, and the default fallback
+  is `none`. Cloud failures now report normalized error codes. See [evals](/docs/packages/evals).
+
+## Fixes
+
+- **Core:** a native `streamObject` falls back correctly, usage counts include blank-seed
+  attempts, and the adapter sets the provider on its own errors.
+- **Apple:** `podspecPath` is now declared in `expo-module.config.json`. Private Cloud
+  Compute session errors name the Private Cloud Compute provider. The SDK requirements
+  are clearer in the docs.
+- **Evals:** a warning shows when `ENDPOINT` is set but `cloud` is not in `--providers`.
+- **Release:** improved CI concurrency, a gate that verifies the published packages, a
+  no-network check, and API and package lint for the Apple package. Breaking changes on
+  0.x now cause a minor version bump.

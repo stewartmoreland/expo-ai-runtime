@@ -28,6 +28,9 @@
       "default": "./build/testing.js"
     }
   },
+  "bin": {
+    "expo-ai-skills": "./build/cli/skills-cli.js"
+  },
   "files": [
     "build",
     "src"
@@ -42,15 +45,16 @@
     "gemini-nano"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.cli.json",
     "prepack": "npm run build",
     "clean": "rm -rf build",
-    "typecheck": "tsc --noEmit -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json && tsc --noEmit -p tsconfig.cli.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "^4.1.9",
     "typescript": "~6.0.3",
     "vitest": "^4.1.9"

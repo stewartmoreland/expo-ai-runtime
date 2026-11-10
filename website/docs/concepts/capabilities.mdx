@@ -77,7 +77,8 @@ inspect every registered provider and its capabilities. `getAvailability()` and
 disallows.
 
 - **`contextWindow`** comes from the OS when the provider reports it. Apple Foundation
-  Models reports the model's real context size (4096 tokens below iOS 27).
+  Models reports the model's real context size (4096 tokens below iOS 27), but only in
+  apps built with the iOS 27 SDK (Xcode 27+).
 - **`supportedLanguages`** on `ExpoAIAvailability` lists the BCP-47 tags the provider's
   model supports, when it reports them.
 

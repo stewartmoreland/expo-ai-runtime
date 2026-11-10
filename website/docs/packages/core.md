@@ -54,6 +54,14 @@ Every `GenerateResult` carries `provider`, `privacy`, `usedFallback`, and `usage
 `reasoningLevel` (`'light' | 'moderate' | 'deep'`), a hint used by Apple Private Cloud
 Compute and ignored elsewhere.
 
+### Skills (next release)
+
+`GenerateOptions` and `CreateSessionOptions` accept `skills`: `SKILL.md` files that you
+compile with the bundled `expo-ai-skills build` CLI. `GenerateResult.skills` lists the
+names of the skills that were applied. The package also exports `parseSkill`,
+`lintSkill`, `buildSkillManifest`, and the `ExpoAISkill` and `ExpoAISkillManifest` types.
+See [Skills](../concepts/skills.md).
+
 ## Related concepts
 
 - [Providers & routing](../concepts/providers.md)
@@ -62,3 +70,4 @@ Compute and ignored elsewhere.
 - [Structured output](../concepts/structured-output.md)
 - [Privacy model](../concepts/privacy.md)
 - [Error model](../concepts/errors.md)
+- [Skills](../concepts/skills.md)

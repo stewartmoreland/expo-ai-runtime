@@ -86,6 +86,7 @@ export const appleFoundationModelsAdapter: ExpoAIAdapter =
     ? createNativeAdapter(NativeApple, {
         provider: PROVIDER,
         capabilityProfile: CAPABILITY_PROFILE,
+        activatesSkills: true,
       })
     : createUnavailableNativeAdapter(PROVIDER, ios ? 'missing_dependency' : 'unsupported_device');
 
@@ -94,6 +95,7 @@ export const applePrivateCloudComputeAdapter: ExpoAIAdapter =
     ? createNativeAdapter(pccNative(NativeApple), {
         provider: PCC_PROVIDER,
         capabilityProfile: PCC_PROFILE,
+        activatesSkills: true,
       })
     : createUnavailableNativeAdapter(
         PCC_PROVIDER,

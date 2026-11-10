@@ -12,3 +12,23 @@ native:
   label: Native
   permalink: /native
   description: Changes to the iOS / Android native adapters.
+
+react:
+  label: React
+  permalink: /react
+  description: Changes to the expo-ai-react hooks.
+
+evals:
+  label: Evals
+  permalink: /evals
+  description: Changes to the expo-ai-evals harness.
+
+skills:
+  label: Skills
+  permalink: /skills
+  description: SKILL.md support in the runtime.
+
+unreleased:
+  label: Unreleased
+  permalink: /unreleased
+  description: Changes merged but not yet in a tagged release.

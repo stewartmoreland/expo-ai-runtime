@@ -9,6 +9,7 @@ export type AdapterGenerateResult = {
     text: string;
     finishReason?: ExpoAIFinishReason;
     usage?: AdapterUsage;
+    skillsActivated?: string[];
     raw?: unknown;
 };
 
@@ -79,6 +80,9 @@ export function buildRepairPrompt(basePrompt: string, schema: JSONSchema, previo
 export function buildSchemaPrompt(basePrompt: string, schema: JSONSchema, schemaName?: string): string;
 
 // @public
+export function buildSkillManifest(skills: ExpoAISkill[]): ExpoAISkillManifest;
+
+// @public
 export function clearAdapters(): void;
 
 // @public
@@ -97,6 +101,7 @@ export type CreateSessionOptions = {
     metadata?: Record<string, string>;
     sensitive?: boolean;
     reasoningLevel?: ExpoAIReasoningLevel;
+    skills?: ExpoAISkill[];
 };
 
 // @public
@@ -138,6 +143,7 @@ export const ExpoAI: {
 
 // @public
 export interface ExpoAIAdapter {
+    readonly activatesSkills?: boolean;
     // (undocumented)
     createSession?(opts: CreateSessionOptions): Promise<AdapterSession>;
     // (undocumented)
@@ -315,6 +321,26 @@ export interface ExpoAISession {
 }
 
 // @public
+export type ExpoAISkill = {
+    name: string;
+    description: string;
+    version: number;
+    mode: 'prompt' | 'instructions';
+    allowsDeactivation: boolean;
+    requiredTools: string[];
+    providers?: ExpoAIProvider[];
+    maxTokens?: number;
+    body: string;
+    estimatedTokens: number;
+};
+
+// @public
+export type ExpoAISkillManifest = {
+    version: string;
+    skills: ExpoAISkill[];
+};
+
+// @public
 export type ExpoAIStructuredMeta = {
     mode: 'native' | 'emulated';
     attempts: number;
@@ -349,7 +375,7 @@ export type ExpoAIUsageSource = 'provider' | 'estimated' | 'unavailable';
 export function extractJson(text: string): string | null;
 
 // @public (undocumented)
-export function finalizeResult(result: AdapterGenerateResult, provider: ExpoAIProvider, usedFallback: boolean): GenerateResult;
+export function finalizeResult(result: AdapterGenerateResult, provider: ExpoAIProvider, usedFallback: boolean, skills?: string[]): GenerateResult;
 
 // @public
 export type GenerateChunk = {
@@ -385,6 +411,7 @@ export type GenerateOptions = {
     model?: LocalModelConfig;
     metadata?: Record<string, string>;
     signal?: AbortSignal;
+    skills?: ExpoAISkill[];
 };
 
 // @public
@@ -396,6 +423,7 @@ export type GenerateResult = {
     finishReason?: ExpoAIFinishReason;
     usage: ExpoAIUsage;
     structured?: ExpoAIStructuredMeta;
+    skills?: string[];
     raw?: unknown;
 };
 
@@ -476,6 +504,9 @@ export interface JSONSchema {
 export type JSONSchemaType = 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null';
 
 // @public
+export function lintSkill(skill: ExpoAISkill): SkillLintResult[];
+
+// @public
 export function listProviders(): Promise<ExpoAIProviderInfo[]>;
 
 // @public
@@ -493,6 +524,7 @@ export type LocalModelConfig = {
 export type NativeAdapterOptions = {
     provider: ExpoAIProvider;
     capabilityProfile: NativeCapabilityProfile;
+    activatesSkills?: boolean;
 };
 
 // @public (undocumented)
@@ -519,6 +551,7 @@ export type NativeGenerateResult = {
         reasoningTokens?: number;
         source?: string;
     };
+    skillsActivated?: string[];
     error?: Record<string, unknown>;
 };
 
@@ -577,6 +610,7 @@ export type NormalizedGenerateRequest = {
     metadata?: Record<string, string>;
     signal?: AbortSignal;
     model?: LocalModelConfig;
+    skills?: ExpoAISkill[];
 };
 
 // @public (undocumented)
@@ -601,6 +635,9 @@ export function parseJson(text: string): ParseResult;
 
 // @public
 export function parsePartialJson(text: string): unknown | null;
+
+// @public
+export function parseSkill(markdown: string): ExpoAISkill;
 
 // @public
 export type PrewarmOptions = {
@@ -702,6 +739,12 @@ export type SessionGenerateOptions = {
 
 // @public
 export function setPrivacyPolicy(policy: ExpoAIPrivacyPolicy): void;
+
+// @public (undocumented)
+export type SkillLintResult = {
+    level: 'error' | 'warning';
+    message: string;
+};
 
 // @public (undocumented)
 export type StreamHandle = {

@@ -1,0 +1,47 @@
+---
+slug: skills
+title: Skills — SKILL.md support (coming in the next minor release)
+authors: [stewmore]
+tags: [unreleased, core, skills]
+---
+
+:::info[Unreleased]
+This feature is merged but **not released**. It will ship in the next minor release of
+`@stewmore/expo-ai-core`. It is not in 0.8.0.
+:::
+
+You can now write reusable instructions as `SKILL.md` files, compile them at build time,
+and pass them to any generation call.
+
+{/* truncate */}
+
+## What's coming
+
+- **`SKILL.md` files** in the open Agent Skills layout: one folder per skill, YAML
+  frontmatter, and a markdown body. Supported keys are `name`, `description`, `version`,
+  `mode`, `allowsDeactivation`, `requiredTools`, `providers`, and `maxTokens`. The parser
+  ignores unknown keys. See [SKILL.md format](/docs/concepts/skills#skillmd-format).
+- **The `expo-ai-skills build` CLI.** It is included in `@stewmore/expo-ai-core`. The CLI
+  parses and lints a folder of skills and writes a content-hashed `skills.manifest.json`
+  that your app bundles. The runtime reads no files on the device. See
+  [build the manifest](/docs/concepts/skills#build-the-manifest).
+- **A `skills` option** on `generate`, `stream`, `generateObject`,
+  `generateObjectWithMeta`, `streamObject`, and `createSession`. `instructions` skills are
+  always on.
+- **On-demand activation** of `prompt` skills: the model sees only a catalog and loads a
+  skill's body when it needs it. On Apple (iOS 26+, on-device and PCC) this is native, an
+  `activate_skill` Foundation Models tool. On Android and cloud the runtime emulates it,
+  including in sessions and streams. See
+  [on-demand activation](/docs/concepts/skills#on-demand-activation).
+- **A per-skill `providers` filter.** If a fallback changes the provider, the runtime
+  selects the skills again for the new provider.
+- **`result.skills`** lists the skills that were applied or loaded for each generation.
+- **Programmatic API:** `parseSkill`, `lintSkill`, and `buildSkillManifest`.
+
+## Not yet
+
+Turning a loaded skill off (`allowsDeactivation`), the iOS 27 Foundation Models `Skills`
+API, `requiredTools` validation, and signed remote manifests are not in this release. See
+the [roadmap](/docs/reference/roadmap#skills).
+
+Read the full guide: [Skills](/docs/concepts/skills).

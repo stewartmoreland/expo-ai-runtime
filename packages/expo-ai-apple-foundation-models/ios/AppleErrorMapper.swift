@@ -119,3 +119,20 @@ enum AppleErrorMapper {
   }
   #endif
 }
+
+enum ExpoAIAppleError: Error, LocalizedError {
+  case unsupportedOS
+  case sessionNotFound
+  case unsupportedSchema(String)
+
+  var errorDescription: String? {
+    switch self {
+    case .unsupportedOS:
+      return "This Apple model is not supported on this OS version or SDK build."
+    case .sessionNotFound:
+      return "The requested AI session no longer exists."
+    case .unsupportedSchema(let keyword):
+      return "JSON Schema '\(keyword)' is not supported by Apple guided generation."
+    }
+  }
+}

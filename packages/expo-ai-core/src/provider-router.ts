@@ -28,6 +28,13 @@ import {
 } from './privacy.js';
 import { getAdapter, getOrderedProviders, getRegisteredProviders, hasAdapter } from './registry.js';
 import { finalizeObjectResult, finalizeResult } from './result.js';
+import {
+  applySkills,
+  generateActivating,
+  planSkills,
+  streamActivating,
+  type SkillActivation,
+} from './skills.js';
 import { createStreamIterable, type StreamSource } from './stream-bridge.js';
 import {
   buildSchemaPrompt,
@@ -110,6 +117,51 @@ function normalizeRequest(options: GenerateOptions): NormalizedGenerateRequest {
   if (options.signal !== undefined) req.signal = options.signal;
   if (options.model !== undefined) req.model = options.model;
   return req;
+}
+
+/**
+ * `req` with every skill that applies to the serving `provider` (fallback may
+ * change it) in the instructions. For structured output, which can't activate.
+ */
+function withSkills(
+  req: NormalizedGenerateRequest,
+  skills: GenerateOptions['skills'],
+  provider: ExpoAIProvider,
+): { req: NormalizedGenerateRequest; applied: string[] } {
+  const { instructions, applied } = applySkills(req.instructions, skills, provider);
+  return { req: applied.length > 0 ? { ...req, instructions } : req, applied };
+}
+
+/**
+ * `req` planned for the serving adapter: instructions-mode skills in the
+ * instructions; prompt-mode skills as `req.skills` when the adapter activates
+ * natively, else a catalog plus an `activation` for core's loop.
+ */
+function withSkillPlan(
+  req: NormalizedGenerateRequest,
+  skills: GenerateOptions['skills'],
+  adapter: ExpoAIAdapter,
+): { req: NormalizedGenerateRequest; applied: string[]; activation?: SkillActivation } {
+  const native = adapter.activatesSkills === true;
+  const plan = planSkills(req.instructions, skills, adapter.provider, native);
+  const attempt: NormalizedGenerateRequest = { ...req };
+  const instructions = plan.instructions();
+  if (instructions !== undefined) attempt.instructions = instructions;
+  if (plan.offered.length === 0) return { req: attempt, applied: plan.applied };
+  if (native) return { req: { ...attempt, skills: plan.offered }, applied: plan.applied };
+  return {
+    req: attempt,
+    applied: plan.applied,
+    activation: {
+      offered: plan.offered,
+      next: (first, activated) => {
+        const next: NormalizedGenerateRequest = { ...first };
+        const withActivated = plan.instructions(activated);
+        if (withActivated !== undefined) next.instructions = withActivated;
+        return next;
+      },
+    },
+  };
 }
 
 /** Unavailable reasons that have a more specific error code than UNAVAILABLE. */
@@ -258,8 +310,14 @@ export async function routeGenerate(options: GenerateOptions): Promise<GenerateR
     }
 
     try {
-      const result = await withSignal(() => adapter.generate(req), options.signal, provider);
-      return finalizeResult(result, provider, provider !== primary);
+      const { req: attempt, applied, activation } = withSkillPlan(req, options.skills, adapter);
+      const generate = (r: NormalizedGenerateRequest) => adapter.generate(r);
+      const result = await withSignal(
+        () => (activation ? generateActivating(attempt, activation, generate) : generate(attempt)),
+        options.signal,
+        provider,
+      );
+      return finalizeResult(result, provider, provider !== primary, applied);
     } catch (error) {
       const normalized = ExpoAIError.from(error, provider);
       lastError = normalized;
@@ -302,14 +360,15 @@ export async function routeGenerateObjectWithMeta(options: GenerateObjectOptions
     }
 
     try {
+      const { req, applied } = withSkills(baseReq, options.skills, provider);
       const validated = await withSignal(
-        () => generateValidatedObject(validatedObjectOptions(adapter, provider, options, baseReq)),
+        () => generateValidatedObject(validatedObjectOptions(adapter, provider, options, req)),
         options.signal,
         provider,
       );
       return {
         object: validated.object,
-        result: finalizeObjectResult(validated, provider, provider !== primary),
+        result: finalizeObjectResult(validated, provider, provider !== primary, applied),
       };
     } catch (error) {
       const normalized = ExpoAIError.from(error, provider);
@@ -357,14 +416,25 @@ async function* routeStreamGenerator(options: GenerateOptions): AsyncGenerator<G
   validatePrompt(options.prompt, candidates[0] as ExpoAIProvider);
 
   const { adapter, provider, usedFallback } = await selectAvailableAdapter(options);
-  const req = normalizeRequest(options);
+  const { req, applied, activation } = withSkillPlan(
+    normalizeRequest(options),
+    options.skills,
+    adapter,
+  );
+  const stream = adapter.stream?.bind(adapter);
+  const generate = (r: NormalizedGenerateRequest) => adapter.generate(r);
 
   const source: StreamSource = {
     provider,
     usedFallback,
+    skills: applied,
     signal: req.signal,
-    startNativeStream: adapter.stream ? (handlers) => adapter.stream!(req, handlers) : null,
-    generateOnce: () => adapter.generate(req),
+    startNativeStream: stream
+      ? (handlers) =>
+          activation ? streamActivating(req, activation, stream, handlers) : stream(req, handlers)
+      : null,
+    generateOnce: () =>
+      activation ? generateActivating(req, activation, generate) : generate(req),
   };
   yield* createStreamIterable(source);
 }
@@ -450,7 +520,11 @@ export function routeStreamObject<T = unknown>(
     }
     const { adapter, provider, usedFallback } = selected;
 
-    const baseReq = normalizeRequest(options);
+    const { req: baseReq, applied } = withSkills(
+      normalizeRequest(options),
+      options.skills,
+      provider,
+    );
     // 'auto' and 'emulated' stream the schema prompt and validate the streamed text.
     let accumulated = '';
     let lastSnapshot: string | undefined;
@@ -506,7 +580,7 @@ export function routeStreamObject<T = unknown>(
       textQueue.close();
 
       resolveObject(validated.object as T);
-      resolveResult(finalizeObjectResult(validated, provider, usedFallback));
+      resolveResult(finalizeObjectResult(validated, provider, usedFallback, applied));
     } catch (error) {
       fail(error, provider);
     }

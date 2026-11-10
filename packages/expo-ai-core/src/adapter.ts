@@ -15,6 +15,7 @@ import type {
   ExpoAIFinishReason,
   ExpoAIProvider,
   ExpoAIReasoningLevel,
+  ExpoAISkill,
   ExpoAIUsage,
   ExpoAIUsageSource,
   JSONSchema,
@@ -34,6 +35,8 @@ export type NormalizedGenerateRequest = {
   metadata?: Record<string, string>;
   signal?: AbortSignal;
   model?: LocalModelConfig;
+  /** Prompt-mode skills to activate on demand. Sent only to adapters with `activatesSkills`. */
+  skills?: ExpoAISkill[];
 };
 
 export type NormalizedObjectRequest = NormalizedGenerateRequest & {
@@ -46,6 +49,8 @@ export type AdapterGenerateResult = {
   text: string;
   finishReason?: ExpoAIFinishReason;
   usage?: AdapterUsage;
+  /** Names of the skills the model activated during this generation. */
+  skillsActivated?: string[];
   raw?: unknown;
 };
 
@@ -99,6 +104,11 @@ export type AdapterRewriteRequest = AdapterTaskRequest & {
  */
 export interface ExpoAIAdapter {
   readonly provider: ExpoAIProvider;
+  /**
+   * The adapter activates `req.skills` (and `CreateSessionOptions.skills`) itself,
+   * e.g. as an Apple `Tool`. Otherwise core emulates activation in JS.
+   */
+  readonly activatesSkills?: boolean;
 
   getAvailability(): Promise<ExpoAIAvailability>;
   getCapabilities(): Promise<ExpoAICapabilities>;

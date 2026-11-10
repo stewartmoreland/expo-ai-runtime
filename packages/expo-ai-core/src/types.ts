@@ -204,6 +204,11 @@ export type GenerateOptions = {
   metadata?: Record<string, string>;
   /** Abort the request (cancels native/cloud streaming). */
   signal?: AbortSignal;
+  /**
+   * Skills to apply. Each skill whose `providers` admits the provider that
+   * serves the request is appended to the instructions.
+   */
+  skills?: ExpoAISkill[];
 };
 
 /** A loose, runtime JSON Schema (the subset the runtime validates). */
@@ -256,6 +261,8 @@ export type GenerateResult = {
   usage: ExpoAIUsage;
   /** Set on structured-output (object) paths only. */
   structured?: ExpoAIStructuredMeta;
+  /** Names of the skills applied to this generation. Omitted when none were. */
+  skills?: string[];
   /** Raw provider payload, for debugging. */
   raw?: unknown;
 };
@@ -295,6 +302,42 @@ export interface StreamObjectResult<T = unknown> {
 }
 
 /* ------------------------------------------------------------------ */
+/* Skills                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A parsed SKILL.md (open Agent Skills layout). Author one folder per skill,
+ * bundle them with `expo-ai-skills build`, and pass them as `skills`.
+ */
+export type ExpoAISkill = {
+  /** Kebab-case id; equals the skill's folder name. */
+  name: string;
+  /** What the skill does and when to use it. */
+  description: string;
+  version: number;
+  /**
+   * `'prompt'` becomes on-demand activation once tool calling lands;
+   * `'instructions'` is always on. Both are injected into the instructions today.
+   */
+  mode: 'prompt' | 'instructions';
+  allowsDeactivation: boolean;
+  requiredTools: string[];
+  /** Providers the skill applies to. Omitted means every provider. */
+  providers?: ExpoAIProvider[];
+  /** Token budget for the body, enforced by `lintSkill`. */
+  maxTokens?: number;
+  /** The markdown after the frontmatter. */
+  body: string;
+  estimatedTokens: number;
+};
+
+/** What `expo-ai-skills build` writes. `version` is a content hash of `skills`. */
+export type ExpoAISkillManifest = {
+  version: string;
+  skills: ExpoAISkill[];
+};
+
+/* ------------------------------------------------------------------ */
 /* Sessions (docs/prd.md §8)                                          */
 /* ------------------------------------------------------------------ */
 
@@ -308,6 +351,8 @@ export type CreateSessionOptions = {
   /** Marks the session as sensitive; gates which providers it may bind to. */
   sensitive?: boolean;
   reasoningLevel?: ExpoAIReasoningLevel;
+  /** Composed into the session instructions once, against the bound provider. */
+  skills?: ExpoAISkill[];
 };
 
 export type SessionGenerateOptions = {

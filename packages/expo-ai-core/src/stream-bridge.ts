@@ -13,6 +13,8 @@ import type { ExpoAIProvider, GenerateChunk } from './types.js';
 export type StreamSource = {
   provider: ExpoAIProvider;
   usedFallback: boolean;
+  /** Names of the skills applied, stamped onto the `done` result. */
+  skills?: string[];
   signal?: AbortSignal;
   /** Start native streaming, wiring our handlers. Return null when unsupported. */
   startNativeStream: ((handlers: AdapterStreamHandlers) => StreamHandle) | null;
@@ -45,7 +47,7 @@ async function* streamGenerator(source: StreamSource): AsyncGenerator<GenerateCh
     }
     yield { type: 'start', provider, privacy };
     if (result.text.length > 0) yield { type: 'delta', text: result.text };
-    yield { type: 'done', result: finalizeResult(result, provider, usedFallback) };
+    yield { type: 'done', result: finalizeResult(result, provider, usedFallback, source.skills) };
     return;
   }
 
@@ -54,7 +56,10 @@ async function* streamGenerator(source: StreamSource): AsyncGenerator<GenerateCh
     onStart: () => queue.push({ type: 'start', provider, privacy }),
     onDelta: (text) => queue.push({ type: 'delta', text }),
     onDone: (result) => {
-      queue.push({ type: 'done', result: finalizeResult(result, provider, usedFallback) });
+      queue.push({
+        type: 'done',
+        result: finalizeResult(result, provider, usedFallback, source.skills),
+      });
       queue.close();
     },
     onError: (error) => queue.fail(ExpoAIError.from(error, provider)),

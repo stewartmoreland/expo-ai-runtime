@@ -22,6 +22,27 @@ if (caps.available && caps.provider === 'apple-foundation-models') {
 }
 ```
 
+## Config plugin
+
+The native module autolinks on its own, but add the config plugin so `expo prebuild`
+also sets the iOS deployment target the pod needs:
+
+```json title="app.json"
+{
+  "expo": {
+    "plugins": [
+      [
+        "@stewmore/expo-ai-apple-foundation-models",
+        { "iosDeploymentTarget": "16.4", "privateCloudCompute": true }
+      ]
+    ]
+  }
+}
+```
+
+- `iosDeploymentTarget` — optional; defaults to `15.1`, the pod minimum.
+- `privateCloudCompute` — optional; opts in to [Private Cloud Compute](#private-cloud-compute).
+
 ## Requirements
 
 - **iOS / iPadOS 26+** on an Apple Intelligence–capable device with Apple Intelligence
@@ -33,7 +54,10 @@ On unsupported OS/devices the adapter reports `available: false` with a reason
 (`unsupported_os_version`, `unsupported_device`, `apple_intelligence_disabled`,
 `model_initializing`, `unsupported_locale`), so the runtime can fall back per the app's
 policy. Availability also reports `supportedLanguages` and the model's real
-`contextWindow`, and is re-checked when the app returns to the foreground.
+`contextWindow` (only in apps built with the iOS 27 SDK, Xcode 27+), and is re-checked
+when the app returns to the foreground, firing
+[`ExpoAI.onAvailabilityChange`](../concepts/capabilities.mdx#reacting-to-changes) for both
+the on-device and PCC providers.
 
 ## What it maps
 
@@ -60,8 +84,11 @@ prompt. Summarize, rewrite, and proofread are provided by the core runtime over
 ```ts
 import { countTokens } from '@stewmore/expo-ai-apple-foundation-models';
 
-const tokens = await countTokens(longText); // number, or null below iOS 26.4
+const tokens = await countTokens(longText); // number, or null where unsupported
 ```
+
+`countTokens` returns `null` below iOS 26.4, and on any iOS version in an app built with
+a pre-iOS 27 SDK (Xcode 26.x). `contextWindow` is likewise omitted from those builds.
 
 ## Private Cloud Compute
 
@@ -85,7 +112,8 @@ confirmed on a device. Check it against Apple's current documentation before you
 :::
 
 PCC requires **iOS 27+**. It is off-device, so the router uses it only when requested
-explicitly or when `fallback` is not `'none'`:
+explicitly or when `fallback` is not `'none'`. Unlike a third-party cloud, it stays
+permitted for `sensitive` prompts:
 
 ```ts
 const result = await ExpoAI.generate({
@@ -108,7 +136,7 @@ const quota = await getPCCQuota();
 // { status: 'below_limit' | 'limit_reached', isApproachingLimit, resetDate (ms) | null,
 //   canRequestLimitIncrease } — or null when PCC isn't configured or supported
 if (quota?.status === 'limit_reached' && quota.canRequestLimitIncrease) {
-  await showPCCLimitIncrease(); // presents Apple's limit-increase sheet
+  await showPCCLimitIncrease(); // presents Apple's sheet; resolves false if it can't be shown
 }
 ```
 

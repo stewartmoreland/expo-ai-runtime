@@ -33,6 +33,7 @@ export type EvalResult = {
   usedFallback: boolean;
   schemaValid?: boolean;
   errorCode?: ExpoAIErrorCode;
+  detail?: string; // error message, or why a privacy check passed/failed
 };
 ```
 
@@ -49,4 +50,5 @@ npm run eval -- --providers apple-foundation-models,cloud --fallback cloud
   their own `fallback`. `runEvalSuite` also defaults to `'none'`, matching the runtime.
 - With `ENDPOINT` set, `cloud` uses the real [reference server](../examples/reference-server.md)
   through `@stewmore/expo-ai-cloud`. That package is an **optional peer dependency**:
-  install it only if you eval against a cloud backend.
+  install it only if you eval against a cloud backend. `ENDPOINT` is ignored (with a
+  warning) unless `cloud` is in `--providers`.

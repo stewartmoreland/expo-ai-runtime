@@ -14,6 +14,7 @@ is exported from `@stewmore/expo-ai-core` unless noted.
 - [Privacy](#privacy)
 - [JSON schema subset](#json-schema-subset)
 - [Sessions](#sessions)
+- [Skills](#skills)
 - [Task helpers](#task-helpers)
 - [Errors](#errors)
 - [Cloud adapter & wire protocol](#cloud-adapter--wire-protocol)
@@ -49,21 +50,21 @@ reject (and its streams throw) on failure.
 ```ts
 type GenerateOptions = {
   prompt: string;
-  provider?: ExpoAIProvider;     // force a provider; omit / 'system-preferred' = default priority
-  fallback?: ExpoAIFallback;     // 'none' (default) | 'cloud' | 'any'
-  instructions?: string;         // system / role instructions
+  provider?: ExpoAIProvider; // force a provider; omit / 'system-preferred' = default priority
+  fallback?: ExpoAIFallback; // 'none' (default) | 'cloud' | 'any'
+  instructions?: string; // system / role instructions
   temperature?: number;
   maxOutputTokens?: number;
-  sensitive?: boolean;           // true ⇒ third-party cloud skipped unless fallback/provider is 'cloud' (see Privacy)
-  model?: LocalModelConfig;      // BYOM descriptor (LiteRT-LM; future)
+  sensitive?: boolean; // true ⇒ third-party cloud skipped unless fallback/provider is 'cloud' (see Privacy)
+  model?: LocalModelConfig; // BYOM descriptor (LiteRT-LM; future)
   metadata?: Record<string, string>;
-  signal?: AbortSignal;          // cancels native + cloud streaming
+  signal?: AbortSignal; // cancels native + cloud streaming
 };
 
 type GenerateObjectOptions = GenerateOptions & {
   schema: JSONSchema;
   schemaName?: string;
-  maxRepairAttempts?: number;    // validate→repair cycles; default 2
+  maxRepairAttempts?: number; // validate→repair cycles; default 2
 };
 
 type StreamObjectOptions = GenerateObjectOptions;
@@ -76,9 +77,9 @@ type GenerateResult = {
   text: string;
   provider: ExpoAIProvider;
   privacy: ExpoAIPrivacyInfo;
-  usedFallback: boolean;         // true when router used a non-primary provider
-  finishReason?: ExpoAIFinishReason;  // 'stop' | 'length' | 'cancelled' | 'safety' | 'tool_calls' | 'unknown'
-  usage?: ExpoAIUsage;           // { inputTokens?, outputTokens?, totalTokens? }
+  usedFallback: boolean; // true when router used a non-primary provider
+  finishReason?: ExpoAIFinishReason; // 'stop' | 'length' | 'cancelled' | 'safety' | 'tool_calls' | 'unknown'
+  usage?: ExpoAIUsage; // { inputTokens?, outputTokens?, totalTokens? }
   raw?: unknown;
 };
 
@@ -89,9 +90,9 @@ type GenerateChunk =
 
 interface StreamObjectResult<T> {
   partialObjectStream: AsyncIterable<DeepPartial<T>>; // progressively-complete snapshots; last === object
-  textStream: AsyncIterable<string>;                  // raw token deltas
-  object: Promise<T>;                                 // validated (repaired) final value
-  result: Promise<GenerateResult>;                    // provider/privacy/usedFallback metadata
+  textStream: AsyncIterable<string>; // raw token deltas
+  object: Promise<T>; // validated (repaired) final value
+  result: Promise<GenerateResult>; // provider/privacy/usedFallback metadata
 }
 ```
 
@@ -127,10 +128,17 @@ type ExpoAICapabilities = {
 };
 
 type ExpoAIUnavailableReason =
-  | 'unsupported_os_version' | 'unsupported_device' | 'model_not_downloaded'
-  | 'model_initializing' | 'apple_intelligence_disabled' | 'aicore_unavailable'
-  | 'aicore_initializing' | 'unsupported_bootloader_state' | 'missing_dependency'
-  | 'provider_not_configured' | 'unknown';
+  | 'unsupported_os_version'
+  | 'unsupported_device'
+  | 'model_not_downloaded'
+  | 'model_initializing'
+  | 'apple_intelligence_disabled'
+  | 'aicore_unavailable'
+  | 'aicore_initializing'
+  | 'unsupported_bootloader_state'
+  | 'missing_dependency'
+  | 'provider_not_configured'
+  | 'unknown';
 
 // listProviders() and useCapabilities().providers return THIS — note the
 // capabilities live under `.capabilities`, not directly on the object:
@@ -142,7 +150,9 @@ type ExpoAIProviderInfo = { provider: ExpoAIProvider; capabilities: ExpoAICapabi
 availability off `.capabilities`:
 
 ```ts
-providers?.map((p) => `${p.provider}: ${p.capabilities.available ? 'ready' : p.capabilities.reasonUnavailable}`)
+providers?.map(
+  (p) => `${p.provider}: ${p.capabilities.available ? 'ready' : p.capabilities.reasonUnavailable}`,
+);
 ```
 
 ## Providers & fallback
@@ -150,11 +160,11 @@ providers?.map((p) => `${p.provider}: ${p.capabilities.available ? 'ready' : p.c
 ```ts
 type ExpoAIProvider =
   | 'system-preferred'
-  | 'apple-foundation-models'       // iOS on-device
-  | 'apple-private-cloud-compute'   // Apple-managed, privacy-preserving
-  | 'android-aicore-gemini-nano'    // Android on-device
-  | 'litert-lm'                     // bring-your-own local model (future)
-  | 'cloud'                         // app-controlled cloud fallback
+  | 'apple-foundation-models' // iOS on-device
+  | 'apple-private-cloud-compute' // Apple-managed, privacy-preserving
+  | 'android-aicore-gemini-nano' // Android on-device
+  | 'litert-lm' // bring-your-own local model (future)
+  | 'cloud' // app-controlled cloud fallback
   | 'none';
 
 // Off-device providers (PCC, cloud) are reached only explicitly or with fallback !== 'none'.
@@ -206,15 +216,20 @@ through but aren't enforced):
 
 ```ts
 interface JSONSchema {
-  type?: ('object'|'array'|'string'|'number'|'integer'|'boolean'|'null') | JSONSchemaType[];
+  type?:
+    | ('object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null')
+    | JSONSchemaType[];
   properties?: Record<string, JSONSchema>;
   required?: string[];
   items?: JSONSchema;
   enum?: unknown[];
-  description?: string;          // include these — they steer the model
-  minimum?: number; maximum?: number;
-  minItems?: number; maxItems?: number;
-  minLength?: number; maxLength?: number;
+  description?: string; // include these — they steer the model
+  minimum?: number;
+  maximum?: number;
+  minItems?: number;
+  maxItems?: number;
+  minLength?: number;
+  maxLength?: number;
   [key: string]: unknown;
 }
 ```
@@ -227,8 +242,12 @@ schemas small and add `description`s; on-device models have small context window
 
 ```ts
 type CreateSessionOptions = {
-  instructions?: string; provider?: ExpoAIProvider; fallback?: ExpoAIFallback;
-  temperature?: number; maxOutputTokens?: number; metadata?: Record<string, string>;
+  instructions?: string;
+  provider?: ExpoAIProvider;
+  fallback?: ExpoAIFallback;
+  temperature?: number;
+  maxOutputTokens?: number;
+  metadata?: Record<string, string>;
 };
 
 interface ExpoAISession {
@@ -237,21 +256,73 @@ interface ExpoAISession {
   generate(options: SessionGenerateOptions): Promise<GenerateResult>;
   stream(options: SessionGenerateOptions): AsyncIterable<GenerateChunk>;
   generateObject<T>(options: SessionGenerateObjectOptions): Promise<T>;
-  reset(): Promise<void>;       // clear transcript, keep the session
-  dispose(): Promise<void>;     // release native resources — always call when done
+  reset(): Promise<void>; // clear transcript, keep the session
+  dispose(): Promise<void>; // release native resources — always call when done
 }
 
-type SessionGenerateOptions = { prompt: string; temperature?: number; maxOutputTokens?: number; signal?: AbortSignal };
+type SessionGenerateOptions = {
+  prompt: string;
+  temperature?: number;
+  maxOutputTokens?: number;
+  signal?: AbortSignal;
+};
 ```
 
 Sessions are native-backed where supported and transcript-emulated otherwise — same interface
 either way. Always `dispose()` (e.g. on unmount) to free native resources.
 
+## Skills
+
+Unreleased (next minor after 0.8.0). `SKILL.md` files (one folder per skill, YAML frontmatter
+
+- markdown body) are compiled at build time; there is no file IO at runtime.
+
+```bash
+npx expo-ai-skills build ./skills --out src/skills.manifest.json   # lint errors => exit 1, no manifest
+```
+
+Frontmatter: `name` (required, kebab-case, = folder name), `description` (required, say _when_
+to use it), `version` (1), `mode` (`'prompt'` | `'instructions'`, default `'prompt'`),
+`allowsDeactivation` (true), `requiredTools` ([]), `providers` (omit = all), `maxTokens`.
+
+```ts
+import manifestJson from './skills.manifest.json';
+const { skills } = manifestJson as ExpoAISkillManifest; // JSON import widens literal types
+
+const result = await ExpoAI.generate({ prompt, skills }); // also stream/generateObject*/streamObject
+result.skills; // instructions skills applied + prompt skills loaded; omitted when none
+const session = await ExpoAI.createSession({ instructions, skills }); // planned once, bound provider
+```
+
+A skill applies only when the serving provider is in its `providers` (re-selected on fallback).
+`mode: 'instructions'` skills are always appended to the instructions as `## Skill: <name>`.
+`mode: 'prompt'` skills load on demand: native on Apple (an `activate_skill` Foundation Models
+`Tool`, iOS 26+, on-device + PCC); elsewhere the runtime puts a catalog in the instructions,
+watches for a reply of only `{"activate_skill":"<name>"}`, and generates again with the skill
+(sessions: a follow-up turn kept in the transcript). Max 3 loads per response. Structured
+output always appends every applicable skill. Not implemented: `allowsDeactivation`,
+`requiredTools` checks, signed remote manifests. Also exported: `parseSkill`, `lintSkill`,
+`buildSkillManifest`.
+
 ## Task helpers
 
 ```ts
-type SummarizeOptions = { text: string; length?: 'short'|'medium'|'long'; provider?; fallback?; sensitive?; signal? };
-type RewriteOptions   = { text: string; style?: RewriteStyle; provider?; fallback?; sensitive?; signal? };
+type SummarizeOptions = {
+  text: string;
+  length?: 'short' | 'medium' | 'long';
+  provider?;
+  fallback?;
+  sensitive?;
+  signal?;
+};
+type RewriteOptions = {
+  text: string;
+  style?: RewriteStyle;
+  provider?;
+  fallback?;
+  sensitive?;
+  signal?;
+};
 type ProofreadOptions = { text: string; provider?; fallback?; sensitive?; signal? };
 
 type RewriteStyle = 'rephrase' | 'shorten' | 'elaborate' | 'friendly' | 'professional' | 'emojify';
@@ -269,41 +340,41 @@ class ExpoAIError extends Error {
   retryable: boolean;
   fallbackRecommended: boolean;
   nativeMessage?: string;
-  detail?: string;               // refusal explanation, unsupported schema keyword, quota reset…
+  detail?: string; // refusal explanation, unsupported schema keyword, quota reset…
   static from(value: unknown, provider: ExpoAIProvider): ExpoAIError;
-  toJSON(): { code, provider, message, retryable, fallbackRecommended, nativeMessage };
+  toJSON(): { code; provider; message; retryable; fallbackRecommended; nativeMessage };
 }
 ```
 
 Default routing semantics per code (override via constructor params if needed):
 
-| Code | retryable | fallbackRecommended | Meaning |
-| --- | --- | --- | --- |
-| `UNAVAILABLE` | no | yes | No provider available for this request. |
-| `UNSUPPORTED_DEVICE` | no | yes | Device can't run the requested provider. |
-| `MODEL_NOT_READY` | **yes** | yes | On-device model still initializing — retry shortly. |
-| `MODEL_DOWNLOAD_REQUIRED` | no | yes | Model must be downloaded first. |
-| `USER_SETTING_REQUIRED` | no | yes | A system setting (e.g. Apple Intelligence) must be on. |
-| `INVALID_PROMPT` | no | **no** | Empty/malformed prompt — fails everywhere; don't fall back. |
-| `CONTEXT_WINDOW_EXCEEDED` | no | yes | Too long for this model; a bigger one may fit. |
-| `SAFETY_BLOCKED` | no | **no** | Blocked by safety — never silently re-route to a third party. |
-| `RATE_LIMITED` | **yes** | yes | Back off / try later. |
-| `CANCELLED` | no | no | Aborted via `signal`. Treat as intentional, not an error UI. |
-| `TIMEOUT` | **yes** | yes | Timed out. |
-| `NATIVE_PROVIDER_ERROR` | no | yes | Underlying native/cloud error. |
-| `QUOTA_EXHAUSTED` | no | **no** | Provider quota used up (e.g. Apple PCC); `detail` may carry the reset date. |
-| `NETWORK_UNAVAILABLE` | **yes** | **no** | Request never reached the server (offline, DNS, TLS). |
-| `SERVICE_UNAVAILABLE` | **yes** | **no** | Backend temporarily down (HTTP 503, PCC outage). |
-| `ENTITLEMENT_MISSING` | no | **no** | App lacks the required entitlement (e.g. PCC). |
-| `REFUSAL` | no | **no** | Model refused; `detail` carries its explanation. |
-| `UNSUPPORTED_SCHEMA` | no | **no** | Schema can't be natively guided; `detail` names the keyword. |
-| `UNSUPPORTED_LOCALE` | no | **no** | Device/model locale not supported. |
-| `TOOL_ERROR` | **yes** | **no** | A tool call failed. |
-| `CONCURRENT_REQUEST` | **yes** | **no** | Provider is busy with another request. |
-| `BACKGROUND_NOT_ALLOWED` | **yes** | **no** | Provider can't run while the app is backgrounded. |
-| `UNKNOWN` | no | yes | Unclassified. |
+| Code                      | retryable | fallbackRecommended | Meaning                                                                     |
+| ------------------------- | --------- | ------------------- | --------------------------------------------------------------------------- |
+| `UNAVAILABLE`             | no        | yes                 | No provider available for this request.                                     |
+| `UNSUPPORTED_DEVICE`      | no        | yes                 | Device can't run the requested provider.                                    |
+| `MODEL_NOT_READY`         | **yes**   | yes                 | On-device model still initializing — retry shortly.                         |
+| `MODEL_DOWNLOAD_REQUIRED` | no        | yes                 | Model must be downloaded first.                                             |
+| `USER_SETTING_REQUIRED`   | no        | yes                 | A system setting (e.g. Apple Intelligence) must be on.                      |
+| `INVALID_PROMPT`          | no        | **no**              | Empty/malformed prompt — fails everywhere; don't fall back.                 |
+| `CONTEXT_WINDOW_EXCEEDED` | no        | yes                 | Too long for this model; a bigger one may fit.                              |
+| `SAFETY_BLOCKED`          | no        | **no**              | Blocked by safety — never silently re-route to a third party.               |
+| `RATE_LIMITED`            | **yes**   | yes                 | Back off / try later.                                                       |
+| `CANCELLED`               | no        | no                  | Aborted via `signal`. Treat as intentional, not an error UI.                |
+| `TIMEOUT`                 | **yes**   | yes                 | Timed out.                                                                  |
+| `NATIVE_PROVIDER_ERROR`   | no        | yes                 | Underlying native/cloud error.                                              |
+| `QUOTA_EXHAUSTED`         | no        | **no**              | Provider quota used up (e.g. Apple PCC); `detail` may carry the reset date. |
+| `NETWORK_UNAVAILABLE`     | **yes**   | **no**              | Request never reached the server (offline, DNS, TLS).                       |
+| `SERVICE_UNAVAILABLE`     | **yes**   | **no**              | Backend temporarily down (HTTP 503, PCC outage).                            |
+| `ENTITLEMENT_MISSING`     | no        | **no**              | App lacks the required entitlement (e.g. PCC).                              |
+| `REFUSAL`                 | no        | **no**              | Model refused; `detail` carries its explanation.                            |
+| `UNSUPPORTED_SCHEMA`      | no        | **no**              | Schema can't be natively guided; `detail` names the keyword.                |
+| `UNSUPPORTED_LOCALE`      | no        | **no**              | Device/model locale not supported.                                          |
+| `TOOL_ERROR`              | **yes**   | **no**              | A tool call failed.                                                         |
+| `CONCURRENT_REQUEST`      | **yes**   | **no**              | Provider is busy with another request.                                      |
+| `BACKGROUND_NOT_ALLOWED`  | **yes**   | **no**              | Provider can't run while the app is backgrounded.                           |
+| `UNKNOWN`                 | no        | yes                 | Unclassified.                                                               |
 
-`fallbackRecommended: false` only stops re-routing for an error *thrown* during generation. A
+`fallbackRecommended: false` only stops re-routing for an error _thrown_ during generation. A
 provider that reports itself unavailable up front (e.g. PCC `quota_exhausted`,
 `unsupported_locale`, `entitlement_missing`) is skipped like any other unavailable provider when
 `fallback` allows another candidate; its code is what you get when none succeeds.
@@ -321,12 +392,12 @@ reports it. The React hooks already swallow `CANCELLED` — they never set `erro
 import { configureCloud, createCloudAdapter, getCloudAdapter } from '@stewmore/expo-ai-cloud';
 
 type CloudProviderConfig = {
-  endpoint: string;                 // base URL, e.g. "https://api.example.com"
+  endpoint: string; // base URL, e.g. "https://api.example.com"
   headers?: Record<string, string>;
-  provider?: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'custom';  // informational
-  fetch?: typeof fetch;             // pass expo/fetch in RN; defaults to globalThis.fetch
-  generatePath?: string;            // default '/v1/generate'
-  streamPath?: string;              // default '/v1/stream'
+  provider?: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'custom'; // informational
+  fetch?: typeof fetch; // pass expo/fetch in RN; defaults to globalThis.fetch
+  generatePath?: string; // default '/v1/generate'
+  streamPath?: string; // default '/v1/stream'
 };
 ```
 

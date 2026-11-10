@@ -26,6 +26,7 @@ import type {
   ExpoAICapabilities,
   ExpoAIFinishReason,
   ExpoAIProvider,
+  ExpoAISkill,
   ExpoAIUnavailableReason,
   ExpoAIUsageSource,
 } from './types.js';
@@ -51,6 +52,8 @@ export type NativeGenerateResult = {
     reasoningTokens?: number;
     source?: string;
   };
+  /** Names of the skills the model activated (native skill activation). */
+  skillsActivated?: string[];
   /** Error-as-value: native resolves (not rejects) with this on failure so the payload survives the bridge. */
   error?: Record<string, unknown>;
 };
@@ -101,6 +104,8 @@ export type NativeCapabilityProfile = Omit<
 export type NativeAdapterOptions = {
   provider: ExpoAIProvider;
   capabilityProfile: NativeCapabilityProfile;
+  /** Native activates prompt-mode skills (sent as `skills: [{name, description, body}]`). */
+  activatesSkills?: boolean;
 };
 
 /* ------------------------------- internals -------------------------------- */
@@ -111,8 +116,14 @@ function newRequestId(provider: ExpoAIProvider): string {
   return `${provider}_${requestCounter}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Skills cross the bridge as primitives: what native needs to offer and load them. */
+function nativeSkills(skills: ExpoAISkill[]): Record<string, string>[] {
+  return skills.map(({ name, description, body }) => ({ name, description, body }));
+}
+
 function nativeOptions(req: NormalizedGenerateRequest): Record<string, unknown> {
   const options: Record<string, unknown> = { prompt: req.prompt };
+  if (req.skills?.length) options.skills = nativeSkills(req.skills);
   if (req.instructions !== undefined) options.instructions = req.instructions;
   if (req.temperature !== undefined) options.temperature = req.temperature;
   if (req.maxOutputTokens !== undefined) options.maxOutputTokens = req.maxOutputTokens;
@@ -136,6 +147,10 @@ function mapResult(result: NativeGenerateResult): AdapterGenerateResult {
       usage.source = result.usage.source as ExpoAIUsageSource;
     }
     mapped.usage = usage;
+  }
+  if (Array.isArray(result.skillsActivated)) {
+    const names = result.skillsActivated.filter((name) => typeof name === 'string');
+    if (names.length > 0) mapped.skillsActivated = names;
   }
   return mapped;
 }
@@ -252,6 +267,7 @@ async function createNativeSession(
 ): Promise<AdapterSession> {
   const createOptions: Record<string, unknown> = {};
   if (options.instructions !== undefined) createOptions.instructions = options.instructions;
+  if (options.skills?.length) createOptions.skills = nativeSkills(options.skills);
 
   let sessionId: string;
   try {
@@ -295,7 +311,7 @@ export function createNativeAdapter(
   native: NativeStreamingModule,
   options: NativeAdapterOptions,
 ): ExpoAIAdapter {
-  const { provider, capabilityProfile } = options;
+  const { provider, capabilityProfile, activatesSkills } = options;
 
   async function probe(): Promise<NativeAvailability> {
     try {
@@ -309,6 +325,7 @@ export function createNativeAdapter(
 
   const adapter: ExpoAIAdapter = {
     provider,
+    ...(activatesSkills ? { activatesSkills } : {}),
     async getAvailability() {
       const raw = await probe();
       const availability: ExpoAIAvailability = { available: raw.available, provider };

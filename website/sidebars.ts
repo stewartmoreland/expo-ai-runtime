@@ -22,6 +22,7 @@ const sidebars: SidebarsConfig = {
         'concepts/structured-output',
         'concepts/privacy',
         'concepts/errors',
+        'concepts/skills',
       ],
     },
     {

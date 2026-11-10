@@ -374,3 +374,63 @@ describe('createNativeAdapter — availability passthrough & prewarm', () => {
     expect(await adapter.prewarm!({})).toBe(false);
   });
 });
+
+describe('createNativeAdapter — skills', () => {
+  const alpha = {
+    name: 'alpha',
+    description: 'Use when alpha',
+    version: 1,
+    mode: 'prompt' as const,
+    allowsDeactivation: true,
+    requiredTools: [],
+    body: 'alpha body',
+    estimatedTokens: 3,
+  };
+
+  it('declares activatesSkills only when asked', () => {
+    const native = new MockNative();
+    expect(
+      createNativeAdapter(native, { provider: PROVIDER, capabilityProfile: PROFILE })
+        .activatesSkills,
+    ).toBeUndefined();
+    expect(
+      createNativeAdapter(native, {
+        provider: PROVIDER,
+        capabilityProfile: PROFILE,
+        activatesSkills: true,
+      }).activatesSkills,
+    ).toBe(true);
+  });
+
+  it('sends skills as primitives and maps skillsActivated back', async () => {
+    const native = new MockNative();
+    native.generate.mockResolvedValueOnce({
+      text: 'ok',
+      skillsActivated: ['alpha', 7 as unknown as string],
+    });
+    const adapter = createNativeAdapter(native, {
+      provider: PROVIDER,
+      capabilityProfile: PROFILE,
+      activatesSkills: true,
+    });
+    const result = await adapter.generate({ prompt: 'hi', skills: [alpha] });
+    expect(native.generate.mock.calls[0]![0].skills).toEqual([
+      { name: 'alpha', description: 'Use when alpha', body: 'alpha body' },
+    ]);
+    expect(result.skillsActivated).toEqual(['alpha']);
+  });
+
+  it('passes session skills to createSession', async () => {
+    const native = new MockNative();
+    const create = vi.spyOn(native, 'createSession');
+    const adapter = createNativeAdapter(native, {
+      provider: PROVIDER,
+      capabilityProfile: PROFILE,
+      activatesSkills: true,
+    });
+    await adapter.createSession!({ skills: [alpha] });
+    expect(create.mock.calls[0]).toEqual([
+      { skills: [{ name: 'alpha', description: 'Use when alpha', body: 'alpha body' }] },
+    ]);
+  });
+});

@@ -28,6 +28,7 @@ export function finalizeResult(
   result: AdapterGenerateResult,
   provider: ExpoAIProvider,
   usedFallback: boolean,
+  skills: string[] = [],
 ): GenerateResult {
   const final: GenerateResult = {
     text: result.text,
@@ -37,6 +38,9 @@ export function finalizeResult(
     usage: normalizeUsage(result.usage),
   };
   if (result.finishReason !== undefined) final.finishReason = result.finishReason;
+  // Always-on skills, then those the model activated on demand.
+  const used = [...new Set([...skills, ...(result.skillsActivated ?? [])])];
+  if (used.length > 0) final.skills = used;
   if (result.raw !== undefined) final.raw = result.raw;
   return final;
 }
@@ -46,11 +50,13 @@ export function finalizeObjectResult(
   validated: ValidatedObjectResult,
   provider: ExpoAIProvider,
   usedFallback: boolean,
+  skills: string[] = [],
 ): GenerateResult {
   const final = finalizeResult(
     { text: validated.raw, raw: validated.object, usage: validated.usage },
     provider,
     usedFallback,
+    skills,
   );
   final.structured = {
     mode: validated.mode,

@@ -36,16 +36,35 @@ loop, long-term memory, and Genkit/LangChain bridges.
 
 ## Phases
 
-| Phase                                     | Delivers                                                                                                                   |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **1. System Provider MVP**                | Core API, iOS + Android adapters, capability detection, generate, sessions, error normalization, privacy metadata          |
-| **2. Cloud Fallback + Structured Output** | Cloud adapter, provider routing, `generateObject`, JSON validation + repair, provider metadata on every result             |
-| **3. Streaming**                          | Native event streaming, AsyncIterable wrapper, cancellation, timeout handling                                              |
-| **4. Task APIs**                          | `summarize`, `rewrite`, `proofread`, image input where available, provider-specific feature mapping                        |
-| **5. LiteRT-LM BYOM**                     | LiteRT-LM provider, model file manager, remote download, checksum verification, compatibility metadata                     |
-| **6. Local Context / RAG**                | Local search abstraction, app-managed index, `generateWithContext`                                                         |
-| **7. Tools + Agent Loop**                 | Tool registry, native iOS tools where available, JS-emulated Android tools, tool-call validation, loop limits, permissions |
-| **8. Backend Framework Bridges**          | Optional Genkit, LangChain, and Vercel AI SDK backend bridges                                                              |
+| Phase                                     | Delivers                                                                                                                                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **1. System Provider MVP**                | Core API, iOS + Android adapters, capability detection, generate, sessions, error normalization, privacy metadata                                                        |
+| **2. Cloud Fallback + Structured Output** | Cloud adapter, provider routing, `generateObject`, JSON validation + repair, provider metadata on every result                                                           |
+| **3. Streaming**                          | Native event streaming, AsyncIterable wrapper, cancellation, timeout handling                                                                                            |
+| **4. Task APIs**                          | `summarize`, `rewrite`, `proofread`, image input where available, provider-specific feature mapping                                                                      |
+| **5. LiteRT-LM BYOM**                     | LiteRT-LM provider, model file manager, remote download, checksum verification, compatibility metadata                                                                   |
+| **6. Local Context / RAG**                | Local search abstraction, app-managed index, `generateWithContext`                                                                                                       |
+| **7. Tools + Agent Loop**                 | Tool registry, native iOS tools where available, JS-emulated Android tools, tool-call validation, loop limits, permissions, `requiredTools` checks for [skills](#skills) |
+| **8. Backend Framework Bridges**          | Optional Genkit, LangChain, and Vercel AI SDK backend bridges                                                                                                            |
+
+## Skills
+
+Skills are `SKILL.md` files that are compiled into a bundled manifest. They are being
+delivered in parts:
+
+- **Merged, ships in the next minor release:** `SKILL.md` parsing and linting, the
+  `expo-ai-skills build` CLI, a content-hashed manifest, `skills` on generate, stream,
+  object, and session calls, the per-skill `providers` filter, and `result.skills`.
+  On-demand activation of `mode: 'prompt'` skills: native on Apple through an
+  `activate_skill` Foundation Models tool (iOS 26+), emulated by the runtime on Android
+  and cloud.
+- **With Dynamic Profiles (iOS 27):** a second native implementation using the
+  Foundation Models `Skills` API, which adds turning skills off (`allowsDeactivation`).
+- **Deferred to phase 7 (Tools + Agent Loop):** `requiredTools` validation against the
+  tool registry.
+- **Later:** signed remote manifests.
+
+See [Skills](../concepts/skills.md).
 
 ## What v1 proves
 

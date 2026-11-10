@@ -4,7 +4,7 @@ import Foundation
 import FoundationModels
 
 /// Thread-safe store of native `LanguageModelSession`s keyed by a JS-visible id.
-/// Retains the model + instructions so a session can be reset (the framework
+/// Retains the model + instructions + skills so a session can be reset (the framework
 /// has no in-place transcript clear — reset rebuilds the session, PCC included).
 @available(iOS 26.0, macOS 26.0, *)
 final class AppleSessionStore {
@@ -14,16 +14,19 @@ final class AppleSessionStore {
     var session: LanguageModelSession
     let model: String?
     let instructions: String?
+    let skills: (any SkillActivation)?
   }
 
   private var entries: [String: Entry] = [:]
   private let queue = DispatchQueue(label: "expo.modules.ai.apple.sessions")
 
-  func create(model: String?, instructions: String?) throws -> String {
-    let session = try AppleFoundationModelsAdapter.makeSession(model: model, instructions: instructions)
+  func create(model: String?, instructions: String?, skills: (any SkillActivation)?) throws -> String {
+    let session = try AppleFoundationModelsAdapter.makeSession(
+      model: model, instructions: instructions, skills: skills
+    )
     let id = UUID().uuidString
     queue.sync {
-      entries[id] = Entry(session: session, model: model, instructions: instructions)
+      entries[id] = Entry(session: session, model: model, instructions: instructions, skills: skills)
     }
     return id
   }
@@ -36,7 +39,7 @@ final class AppleSessionStore {
     queue.sync {
       guard let entry = entries[id],
             let session = try? AppleFoundationModelsAdapter.makeSession(
-              model: entry.model, instructions: entry.instructions
+              model: entry.model, instructions: entry.instructions, skills: entry.skills
             ) else { return }
       entries[id]?.session = session
     }

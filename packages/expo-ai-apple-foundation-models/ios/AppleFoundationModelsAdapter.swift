@@ -77,8 +77,9 @@ enum AppleFoundationModelsAdapter {
     return await run(options, provider: providerName(for: model)) {
       #if canImport(FoundationModels)
       if #available(iOS 26.0, macOS 26.0, *) {
-        let session = try makeSession(model: model, instructions: options["instructions"] as? String)
-        return try await respond(session: session, model: model, options: options)
+        let skills = try AppleSkills.make(options["skills"])
+        let session = try makeSession(model: model, instructions: options["instructions"] as? String, skills: skills)
+        return try await AppleSkills.stamp(respond(session: session, model: model, options: options), skills)
       }
       #endif
       throw ExpoAIAppleError.unsupportedOS
@@ -92,7 +93,9 @@ enum AppleFoundationModelsAdapter {
       // A missing entry falls back to the caller's `model` (the PCC wrapper sends "pcc").
       return await run(options, provider: providerName(for: entry?.model ?? options["model"] as? String)) {
         guard let entry else { throw ExpoAIAppleError.sessionNotFound }
-        return try await respond(session: entry.session, model: entry.model, options: options)
+        return try await AppleSkills.stamp(
+          respond(session: entry.session, model: entry.model, options: options), entry.skills
+        )
       }
     }
     #endif
@@ -195,7 +198,8 @@ extension AppleFoundationModelsAdapter {
     options: [String: Any],
     emit: ([String: Any]) -> Void
   ) async throws {
-    let session = try makeSession(model: model, instructions: options["instructions"] as? String)
+    let skills = try AppleSkills.make(options["skills"])
+    let session = try makeSession(model: model, instructions: options["instructions"] as? String, skills: skills)
     emit(["requestId": requestId, "type": "start"])
 
     var last = ""
@@ -223,7 +227,7 @@ extension AppleFoundationModelsAdapter {
     if let usage {
       result["usage"] = usage
     }
-    emit(["requestId": requestId, "type": "done", "result": result])
+    emit(["requestId": requestId, "type": "done", "result": AppleSkills.stamp(result, skills)])
   }
 
   @available(iOS 26.0, macOS 26.0, *)
@@ -246,18 +250,24 @@ extension AppleFoundationModelsAdapter {
   // MARK: Sessions
 
   /// `model == "pcc"` binds to Private Cloud Compute (27 SDK + iOS 27, else
-  /// `unsupportedOS`); anything else is the on-device system model.
+  /// `unsupportedOS`); anything else is the on-device system model. `skills`
+  /// supplies the session's tools (on-demand skill activation).
   @available(iOS 26.0, macOS 26.0, *)
-  static func makeSession(model: String?, instructions: String?) throws -> LanguageModelSession {
+  static func makeSession(
+    model: String?,
+    instructions: String?,
+    skills: (any SkillActivation)? = nil
+  ) throws -> LanguageModelSession {
+    let tools = skills?.tools ?? []
     if model == "pcc" {
       #if canImport(FoundationModels, _version: 2.0)
       if #available(iOS 27.0, macOS 27.0, *) {
-        return LanguageModelSession(model: PrivateCloudComputeLanguageModel(), tools: [], instructions: instructions)
+        return LanguageModelSession(model: PrivateCloudComputeLanguageModel(), tools: tools, instructions: instructions)
       }
       #endif
       throw ExpoAIAppleError.unsupportedOS
     }
-    return LanguageModelSession(instructions: instructions ?? defaultInstructions)
+    return LanguageModelSession(tools: tools, instructions: instructions ?? defaultInstructions)
   }
 
   @available(iOS 26.0, macOS 26.0, *)
@@ -371,27 +381,14 @@ extension AppleFoundationModelsAdapter {
     #if canImport(FoundationModels)
     if #available(iOS 26.0, macOS 26.0, *) {
       let model = options["model"] as? String
-      let id = try AppleSessionStore.shared.create(model: model, instructions: options["instructions"] as? String)
+      let id = try AppleSessionStore.shared.create(
+        model: model,
+        instructions: options["instructions"] as? String,
+        skills: AppleSkills.make(options["skills"])
+      )
       return ["sessionId": id, "provider": providerName(for: model)]
     }
     #endif
     throw ExpoAIAppleError.unsupportedOS
-  }
-}
-
-enum ExpoAIAppleError: Error, LocalizedError {
-  case unsupportedOS
-  case sessionNotFound
-  case unsupportedSchema(String)
-
-  var errorDescription: String? {
-    switch self {
-    case .unsupportedOS:
-      return "This Apple model is not supported on this OS version or SDK build."
-    case .sessionNotFound:
-      return "The requested AI session no longer exists."
-    case .unsupportedSchema(let keyword):
-      return "JSON Schema '\(keyword)' is not supported by Apple guided generation."
-    }
   }
 }
